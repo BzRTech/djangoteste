@@ -1,0 +1,31 @@
+{% extends 'students/base.html' %}
+
+{% block content %}
+    <h1>Lista de Alunos</h1>
+    <a href="{% url 'student-create' %}" class="button">Adicionar Novo Aluno</a>
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Matrícula</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.student_name }}</td>
+                <td>{{ student.student_serial }}</td>
+                <td>
+                    <a href="{% url 'student-update' student.pk %}">Editar</a> |
+                    <a href="{% url 'student-delete' student.pk %}">Deletar</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">Nenhum aluno encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
