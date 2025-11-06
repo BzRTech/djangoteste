@@ -13,44 +13,87 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    console.log('=== DASHBOARD MONTADO ===');
     fetchData();
   }, []);
 
   const fetchData = async () => {
+    console.log('🔄 Iniciando fetchData...');
+    
     try {
       setLoading(true);
-      const [studentsRes, classesRes, teachersRes, schoolsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/students/`),
-        fetch(`${API_BASE_URL}/classes/`),
-        fetch(`${API_BASE_URL}/teachers/`),
-        fetch(`${API_BASE_URL}/schools/`)
-      ]);
+      console.log('📡 Fazendo requisições para:', API_BASE_URL);
+      
+      // Requisição para students
+      console.log('📨 Buscando students...');
+      const studentsRes = await fetch(`${API_BASE_URL}/students/`);
+      console.log('✅ Students Response:', studentsRes.status, studentsRes.ok);
+      const studentsData = await studentsRes.json();
+      console.log('📦 Students Data:', studentsData);
+      
+      // Requisição para classes
+      console.log('📨 Buscando classes...');
+      const classesRes = await fetch(`${API_BASE_URL}/classes/`);
+      console.log('✅ Classes Response:', classesRes.status, classesRes.ok);
+      const classesData = await classesRes.json();
+      console.log('📦 Classes Data:', classesData);
+      
+      // Requisição para teachers
+      console.log('📨 Buscando teachers...');
+      const teachersRes = await fetch(`${API_BASE_URL}/teachers/`);
+      console.log('✅ Teachers Response:', teachersRes.status, teachersRes.ok);
+      const teachersData = await teachersRes.json();
+      console.log('📦 Teachers Data:', teachersData);
+      
+      // Requisição para schools
+      console.log('📨 Buscando schools...');
+      const schoolsRes = await fetch(`${API_BASE_URL}/schools/`);
+      console.log('✅ Schools Response:', schoolsRes.status, schoolsRes.ok);
+      const schoolsData = await schoolsRes.json();
+      console.log('📦 Schools Data:', schoolsData);
 
-      const [studentsData, classesData, teachersData, schoolsData] = await Promise.all([
-        studentsRes.json(),
-        classesRes.json(),
-        teachersRes.json(),
-        schoolsRes.json()
-      ]);
+      // Processar os dados
+      const studentsArray = Array.isArray(studentsData) ? studentsData : (studentsData.results || []);
+      const classesArray = Array.isArray(classesData) ? classesData : (classesData.results || []);
+      const teachersArray = Array.isArray(teachersData) ? teachersData : (teachersData.results || []);
+      const schoolsArray = Array.isArray(schoolsData) ? schoolsData : (schoolsData.results || []);
 
-      // Garantir que sempre sejam arrays
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
-      setClasses(Array.isArray(classesData) ? classesData : []);
-      setTeachers(Array.isArray(teachersData) ? teachersData : []);
-      setSchools(Array.isArray(schoolsData) ? schoolsData : []);
+      console.log('📊 Arrays processados:', {
+        students: studentsArray.length,
+        classes: classesArray.length,
+        teachers: teachersArray.length,
+        schools: schoolsArray.length
+      });
+
+      setStudents(studentsArray);
+      setClasses(classesArray);
+      setTeachers(teachersArray);
+      setSchools(schoolsArray);
+      
+      console.log('✅ State atualizado com sucesso!');
+      console.log('📈 Students no state:', studentsArray);
+      
       setError(null);
     } catch (err) {
+      console.error('❌ ERRO:', err);
+      console.error('❌ Mensagem:', err.message);
+      console.error('❌ Stack:', err.stack);
       setError(err.message);
-      console.error('Erro:', err);
-      // Inicializar com arrays vazios em caso de erro
       setStudents([]);
       setClasses([]);
       setTeachers([]);
       setSchools([]);
     } finally {
       setLoading(false);
+      console.log('🏁 fetchData finalizado');
     }
   };
+
+  // Log quando students mudar
+  useEffect(() => {
+    console.log('🔄 Students state mudou:', students);
+    console.log('🔄 Length:', students.length);
+  }, [students]);
 
   // Dados para gráficos com verificações
   const studentsByClass = Array.isArray(classes) ? classes.map(cls => ({
@@ -77,7 +120,10 @@ const Dashboard = () => {
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
+  console.log('🎨 Renderizando Dashboard. Loading:', loading, 'Error:', error, 'Students:', students.length);
+
   if (loading) {
+    console.log('⏳ Mostrando tela de loading');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -89,6 +135,7 @@ const Dashboard = () => {
   }
 
   if (error) {
+    console.log('❌ Mostrando tela de erro:', error);
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md">
@@ -110,6 +157,8 @@ const Dashboard = () => {
       </div>
     );
   }
+
+  console.log('✅ Mostrando dashboard com dados');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
