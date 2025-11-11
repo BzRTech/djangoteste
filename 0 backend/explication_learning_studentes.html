@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tb_student_learning_progress - Guia Detalhado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .section {
+            margin-bottom: 35px;
+            page-break-inside: avoid;
+        }
+        
+        .section h2 {
+            color: #2c3e50;
+            font-size: 22px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+        
+        .section h3 {
+            color: #34495e;
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .info-box {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #f39c12;
+        }
+        
+        .success-box {
+            background: #d4edda;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .error-box {
+            background: #f8d7da;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .table-fields {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .field {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 20px;
+        }
+        
+        .field:last-child {
+            border-bottom: none;
+        }
+        
+        .field-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .field-desc {
+            color: #555;
+        }
+        
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .example {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 3px solid #6c757d;
+        }
+        
+        .example h4 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        
+        .flow-diagram {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 3px solid #2980b9;
+            font-family: monospace;
+            line-height: 1.8;
+        }
+        
+        .metric-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .metric-table th,
+        .metric-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .metric-table th {
+            background: #2c3e50;
+            color: white;
+        }
+        
+        .metric-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        ul, ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 tb_student_learning_progress</h1>
+            <p>Guia Completo de Funcionamento e Métricas</p>
+        </div>
+        
+        <!-- O QUE É -->
+        <div class="section">
+            <h2>🎯 O Que É Esta Tabela?</h2>
+            
+            <p>A <strong>tb_student_learning_progress</strong> é uma tabela de acompanhamento que rastreia a evolução de cada aluno em cada competência ao longo do tempo.</p>
+            
+            <div class="info-box">
+                <strong>Analogia:</strong> Se tb_exam_results mostra a nota GERAL do aluno em uma prova, tb_student_learning_progress mostra como ele foi em CADA COMPETÊNCIA dentro dessa prova (e a evolução disso ao longo do tempo).
+            </div>
+            
+            <h3>Estrutura da Tabela:</h3>
+            <div class="table-fields">
+                <div class="field">
+                    <span class="field-name">id</span>
+                    <span class="field-desc">Identificador único do registro</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">id_student</span>
+                    <span class="field-desc">Qual aluno (referência a tb_students)</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">id_competency</span>
+                    <span class="field-desc">Qual competência sendo avaliada (referência a tb_competency_ideb)</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">id_exam_application</span>
+                    <span class="field-desc">Qual prova aplicada (referência a tb_exam_applications)</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">score</span>
+                    <span class="field-desc">Pontos obtidos nesta competência (ex: 3.5)</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">max_score</span>
+                    <span class="field-desc">Pontos máximos possíveis nesta competência (ex: 5.0)</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">competency_mastery</span>
+                    <span class="field-desc">Percentual de domínio (0-100 ou decimal)</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">assessment_date</span>
+                    <span class="field-desc">Data da avaliação</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">created_at</span>
+                    <span class="field-desc">Timestamp de quando foi registrado</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FLUXO DE DADOS -->
+        <div class="section">
+            <h2>🔄 Fluxo de Dados: Como Funciona?</h2>
+            
+            <div class="flow-diagram">
+1. Prova é aplicada a uma turma
+   └─ Registra em tb_exam_applications
+   
+2. Aluno responde as questões
+   └─ Respostas salvas em tb_student_answers
+   
+3. Sistema processa respostas:
+   └─ Calcula total_score em tb_exam_results
+   └─ Agrupa por COMPETÊNCIA
+   
+4. Para cada competência:
+   ├─ Pega todas as questões dela
+   ├─ Filtra as respostas do aluno nelas
+   ├─ Soma os pontos
+   ├─ Calcula percentual de acerto
+   └─ Insere em tb_student_learning_progress
+   
+5. Histórico mantido:
+   └─ Próxima prova = novo registro
+   └─ Permite comparar evolução
+            </div>
+            
+            <h3>Exemplo Prático:</h3>
+            <div class="example">
+                <h4>📝 Cenário:</h4>
+                <ul>
+                    <li>Prova de Matemática com 10 questões</li>
+                    <li>Questões mapeadas para 3 competências:
+                        <ul>
+                            <li><strong>C1:</strong> "Resolver equações" (questões 1,2,3) - 3 pontos</li>
+                            <li><strong>C2:</strong> "Geometria" (questões 4,5,6,7) - 4 pontos</li>
+                            <li><strong>C3:</strong> "Lógica" (questões 8,9,10) - 3 pontos</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <h4>📊 Aluno João respondeu:</h4>
+                <ul>
+                    <li><strong>C1:</strong> Acertou 2 de 3 → Score: 2.0/3.0 → Mastery: 66.67%</li>
+                    <li><strong>C2:</strong> Acertou 3 de 4 → Score: 3.0/4.0 → Mastery: 75.00%</li>
+                    <li><strong>C3:</strong> Acertou 1 de 3 → Score: 1.0/3.0 → Mastery: 33.33%</li>
+                </ul>
+                
+                <h4>💾 Registros criados em tb_student_learning_progress:</h4>
+                <table class="metric-table">
+                    <tr>
+                        <th>id_student</th>
+                        <th>id_competency</th>
+                        <th>score</th>
+                        <th>max_score</th>
+                        <th>competency_mastery</th>
+                        <th>assessment_date</th>
+                    </tr>
+                    <tr>
+                        <td>João (id:5)</td>
+                        <td>C1 (id:1)</td>
+                        <td>2.00</td>
+                        <td>3.00</td>
+                        <td>66.67</td>
+                        <td>2024-11-09</td>
+                    </tr>
+                    <tr>
+                        <td>João (id:5)</td>
+                        <td>C2 (id:2)</td>
+                        <td>3.00</td>
+                        <td>4.00</td>
+                        <td>75.00</td>
+                        <td>2024-11-09</td>
+                    </tr>
+                    <tr>
+                        <td>João (id:5)</td>
+                        <td>C3 (id:3)</td>
+                        <td>1.00</td>
+                        <td>3.00</td>
+                        <td>33.33</td>
+                        <td>2024-11-09</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- COMO AS MÉTRICAS SÃO EXTRAÍDAS -->
+        <div class="section">
+            <h2>📈 Como as Métricas São Extraídas?</h2>
+            
+            <h3>1. Score (Pontos Obtidos)</h3>
+            <div class="info-box">
+                <strong>Fórmula:</strong> Soma dos pontos das questões corretas da competência
+                <div class="code-block">
+SELECT 
+    SUM(q.points) as score
+FROM tb_student_answers sa
+JOIN tb_questions q ON sa.id_question = q.id
+JOIN tb_question_competency qc ON q.id = qc.id_question
+WHERE sa.id_student = ?
+  AND sa.id_exam_application = ?
+  AND qc.id_competency = ?
+  AND sa.is_correct = true
+                </div>
+            </div>
+            
+            <h3>2. Max_score (Máximo Possível)</h3>
+            <div class="info-box">
+                <strong>Fórmula:</strong> Soma de TODOS os pontos das questões dessa competência na prova
+                <div class="code-block">
+SELECT 
+    SUM(q.points) as max_score
+FROM tb_questions q
+JOIN tb_question_competency qc ON q.id = qc.id_question
+WHERE q.id_exam = ?
+  AND qc.id_competency = ?
+                </div>
+            </div>
+            
+            <h3>3. Competency_mastery (Percentual de Domínio)</h3>
+            <div class="info-box">
+                <strong>Fórmula:</strong> (score / max_score) × 100
+                <div class="code-block">
+competency_mastery = (score / max_score) * 100
+
+Exemplo: (2.0 / 3.0) * 100 = 66.67%
+                </div>
+            </div>
+        </div>
+        
+        <!-- COMO OS VALORES SÃO ATRIBUÍDOS -->
+        <div class="section">
+            <h2>🎬 Como Os Valores São Atribuídos?</h2>
+            
+            <h3>Processo Passo a Passo:</h3>
+            
+            <div class="success-box">
+                <strong>PASSO 1:</strong> Aluno responde prova
+                <ul>
+                    <li>Respostas são salvas em tb_student_answers</li>
+                    <li>Campo is_correct é calculado comparando com tb_questions.correct_answer</li>
+                </ul>
+            </div>
+            
+            <div class="success-box">
+                <strong>PASSO 2:</strong> Sistema dispara rotina de processamento
+                <ul>
+                    <li>Após a prova ser finalizada (ou manualmente)</li>
+                    <li>Busca todas as respostas do aluno naquela prova</li>
+                </ul>
+            </div>
+            
+            <div class="success-box">
+                <strong>PASSO 3:</strong> Agrupa por competência
+                <ul>
+                    <li>Para cada competência avaliada naquela prova:</li>
+                    <li>Identifica as questões mapeadas para essa competência (tb_question_competency)</li>
+                </ul>
+            </div>
+            
+            <div class="success-box">
+                <strong>PASSO 4:</strong> Calcula métricas
+                <ul>
+                    <li>Score = soma de pontos das questões certas</li>
+                    <li>Max_score = soma de pontos de todas as questões</li>
+                    <li>Competency_mastery = (score / max_score) × 100</li>
+                </ul>
+            </div>
+            
+            <div class="success-box">
+                <strong>PASSO 5:</strong> Insere em tb_student_learning_progress
+                <ul>
+                    <li>Um registro por competência por prova</li>
+                    <li>Mantém histórico completo</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- QUERY PARA INSERIR -->
+        <div class="section">
+            <h2>💾 Query Para Inserir Dados</h2>
+            
+            <h3>Query Completa (Automatizada):</h3>
+            <div class="code-block">
+INSERT INTO tb_student_learning_progress 
+(id_student, id_competency, id_exam_application, score, max_score, competency_mastery, assessment_date)
+
+SELECT 
+    sa.id_student,
+    qc.id_competency,
+    sa.id_exam_application,
+    COALESCE(SUM(CASE WHEN sa.is_correct = true THEN q.points ELSE 0 END), 0) as score,
+    SUM(q.points) as max_score,
+    ROUND((COALESCE(SUM(CASE WHEN sa.is_correct = true THEN q.points ELSE 0 END), 0) / 
+           NULLIF(SUM(q.points), 0)) * 100, 2) as competency_mastery,
+    ea.application_date as assessment_date
+FROM tb_student_answers sa
+JOIN tb_questions q ON sa.id_question = q.id
+JOIN tb_question_competency qc ON q.id = qc.id_question
+JOIN tb_exam_applications ea ON sa.id_exam_application = ea.id
+GROUP BY sa.id_student, qc.id_competency, sa.id_exam_application, ea.application_date
+ON CONFLICT (id_student, id_competency, id_exam_application) 
+DO UPDATE SET 
+    score = EXCLUDED.score,
+    max_score = EXCLUDED.max_score,
+    competency_mastery = EXCLUDED.competency_mastery;
+            </div>
+        </div>
+        
+        <!-- CASOS DE USO -->
+        <div class="section">
+            <h2>🎓 Casos de Uso da Tabela</h2>
+            
+            <h3>1. Identificar Fraquezas do Aluno</h3>
+            <div class="example">
+                <h4>Query:</h4>
+                <div class="code-block">
+SELECT 
+    s.student_name,
+    c.competency_name,
+    slp.competency_mastery
+FROM tb_student_learning_progress slp
+JOIN tb_students s ON slp.id_student = s.id_student
+JOIN tb_competency_ideb c ON slp.id_competency = c.id
+WHERE slp.competency_mastery < 50
+ORDER BY slp.competency_mastery ASC;
+                </div>
+                <h4>Resultado:</h4>
+                <p>Mostra todas as competências que o aluno não domina (< 50%)</p>
+            </div>
+            
+            <h3>2. Comparar Evolução Entre Provas</h3>
+            <div class="example">
+                <h4>Query:</h4>
+                <div class="code-block">
+SELECT 
+    c.competency_name,
+    slp.assessment_date,
+    slp.competency_mastery,
+    LAG(slp.competency_mastery) OVER (ORDER BY slp.assessment_date) as mastery_anterior
+FROM tb_student_learning_progress slp
+JOIN tb_competency_ideb c ON slp.id_competency = c.id
+WHERE slp.id_student = 5
+ORDER BY slp.assessment_date;
+                </div>
+                <h4>Resultado:</h4>
+                <p>Mostra a progressão do aluno na mesma competência ao longo do tempo</p>
+            </div>
+            
+            <h3>3. Turma com Melhor Desempenho em Competência</h3>
+            <div class="example">
+                <h4>Query:</h4>
+                <div class="code-block">
+SELECT 
+    c.class_name,
+    c.competency_name,
+    AVG(slp.competency_mastery) as avg_mastery
+FROM tb_student_learning_progress slp
+JOIN tb_students s ON slp.id_student = s.id_student
+JOIN tb_class c ON s.id_class = c.id
+WHERE slp.id_competency = 2
+GROUP BY c.class_name, c.competency_name
+ORDER BY avg_mastery DESC;
+                </div>
+                <h4>Resultado:</h4>
+                <p>Compara o desempenho médio de turmas em uma competência específica</p>
+            </div>
+        </div>
+        
+        <!-- RESUMO -->
+        <div class="section">
+            <h2>📋 Resumo Executivo</h2>
+            
+            <table class="metric-table">
+                <tr>
+                    <th>Aspecto</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><strong>Propósito</strong></td>
+                    <td>Rastrear desempenho por competência, não apenas nota geral</td>
+                </tr>
+                <tr>
+                    <td><strong>Dados Extraídos De</strong></td>
+                    <td>tb_student_answers + tb_questions + tb_question_competency</td>
+                </tr>
+                <tr>
+                    <td><strong>Score</strong></td>
+                    <td>Soma dos pontos das questões certas da competência</td>
+                </tr>
+                <tr>
+                    <td><strong>Max_score</strong></td>
+                    <td>Soma de TODOS os pontos das questões dessa competência</td>
+                </tr>
+                <tr>
+                    <td><strong>Competency_mastery</strong></td>
+                    <td>(Score / Max_score) × 100 = percentual de domínio</td>
+                </tr>
+                <tr>
+                    <td><strong>Quando Inserir</strong></td>
+                    <td>Após prova ser respondida e corrigida (automático)</td>
+                </tr>
+                <tr>
+                    <td><strong>Valor Pedagógico</strong></td>
+                    <td>Diagnóstico detalhado de lacunas de aprendizagem</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>📊 Guia Completo - tb_student_learning_progress</p>
+            <p>Para análises pedagógicas detalhadas e acompanhamento individual</p>
+        </div>
+    </div>
+</body>
+</html>

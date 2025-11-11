@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Users, GraduationCap, School, BookOpen, TrendingUp, Award } from 'lucide-react';
+import StudentTable from './components/StudentTable.jsx';
+import DescriptorCatalog from './components/DescriptorCatalog.jsx';
+
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -350,6 +353,7 @@ const Dashboard = () => {
         </div>
       </div>
     </div>
+
   );
 };
 
