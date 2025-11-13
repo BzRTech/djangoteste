@@ -24,7 +24,8 @@ router.register(r'class-ideb-indicators', TbClassIdebIndicatorsViewSet, basename
 # ROTAS DE COMPETÊNCIAS E DESCRITORES
 # ============================================
 router.register(r'competencies', TbCompetencyIdebViewSet, basename='competency')
-router.register(r'distractors', TbDistractorCatalogViewSet, basename='distractor')
+# ✅ CORREÇÃO: Mudado de 'distractors' para 'descriptors'
+router.register(r'descriptors', TbDescriptorsCatalogViewSet, basename='descriptor')
 
 # ============================================
 # ROTAS DE EXAMES E QUESTÕES
@@ -45,7 +46,7 @@ router.register(r'exam-results', TbExamResultsViewSet, basename='exam-result')
 # ============================================
 # ROTAS DE PROGRESSO E CONQUISTAS
 # ============================================
-router.register(r'student-achievements', TbStudentDistractorAchievementsViewSet, basename='student-achievement')
+router.register(r'student-achievements', TbStudentDescriptorAchievementsViewSet, basename='student-achievement')
 router.register(r'learning-progress', TbStudentLearningProgressViewSet, basename='learning-progress')
 
 urlpatterns = [

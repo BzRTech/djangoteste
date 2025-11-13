@@ -1,11 +1,11 @@
 import React from 'react';
 import { BookOpen, GraduationCap, Filter } from 'lucide-react';
 
-const DescriptorStats = ({ distractors, subjects, grades, filteredDistractors }) => {
+const DescriptorStats = ({ descriptors = [], subjects = [], grades = [], filteredDescriptors = [] }) => {
   const stats = [
     {
       title: 'Total de Descritores',
-      value: distractors.length,
+      value: descriptors.length,
       icon: BookOpen,
       color: 'blue'
     },
@@ -23,7 +23,7 @@ const DescriptorStats = ({ distractors, subjects, grades, filteredDistractors })
     },
     {
       title: 'Filtrados',
-      value: filteredDistractors.length,
+      value: filteredDescriptors.length,
       icon: Filter,
       color: 'orange'
     }

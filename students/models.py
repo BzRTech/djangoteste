@@ -172,25 +172,26 @@ class TbCompetencyIdeb(models.Model):
         return f"{self.competency_code} - {self.competency_name}"
 
 
-class TbDistractorCatalog(models.Model):
+# ⚠️ CORREÇÃO: Nome correto da tabela é tb_descriptors_catalog
+class TbDescriptorsCatalog(models.Model):
     id = models.AutoField(primary_key=True)
     subject = models.CharField(max_length=100, blank=True, null=True)
     learning_field = models.CharField(max_length=255, blank=True, null=True)
     grade = models.CharField(max_length=50, blank=True, null=True)
-    distractor_code = models.CharField(max_length=50, unique=True)
-    distractor_name = models.CharField(max_length=255)
-    distractor_description = models.TextField(blank=True, null=True)
+    descriptor_code = models.CharField(max_length=50, unique=True)
+    descriptor_name = models.CharField(max_length=255)
+    descriptor_description = models.TextField(blank=True, null=True)
     icon = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = False
-        db_table = 'tb_distractor_catalog'
+        db_table = 'tb_descriptors_catalog'  # ✅ Nome correto da tabela
         verbose_name = 'Descritor'
         verbose_name_plural = 'Catálogo de Descritores'
 
     def __str__(self):
-        return f"{self.distractor_code} - {self.distractor_name}"
+        return f"{self.descriptor_code} - {self.descriptor_name}"
 
 
 # ============================================
@@ -227,10 +228,10 @@ class TbQuestions(models.Model):
     skill_assessed = models.CharField(max_length=255, blank=True, null=True)
     difficulty_level = models.CharField(max_length=50, blank=True, null=True)
     points = models.DecimalField(max_digits=5, decimal_places=2, default=1.0)
-    id_distractor = models.ForeignKey(
-        TbDistractorCatalog, 
+    id_descriptor = models.ForeignKey(  # ✅ Renomeado de id_distractor
+        TbDescriptorsCatalog, 
         on_delete=models.DO_NOTHING, 
-        db_column='id_distractor',
+        db_column='id_descriptor',
         blank=True,
         null=True
     )
@@ -253,7 +254,7 @@ class TbAlternatives(models.Model):
     alternative_letter = models.CharField(max_length=1)
     alternative_text = models.TextField()
     is_correct = models.BooleanField(default=False)
-    distractor_type = models.CharField(max_length=100, blank=True, null=True)
+    descriptor_type = models.CharField(max_length=100, blank=True, null=True)  # ✅ Renomeado
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -387,13 +388,13 @@ class TbExamResults(models.Model):
 # MODELOS DE PROGRESSO E CONQUISTAS
 # ============================================
 
-class TbStudentDistractorAchievements(models.Model):
+class TbStudentDescriptorAchievements(models.Model):  # ✅ Renomeado
     id = models.AutoField(primary_key=True)
     id_student = models.ForeignKey(TbStudents, on_delete=models.DO_NOTHING, db_column='id_student')
-    id_distractor = models.ForeignKey(
-        TbDistractorCatalog, 
+    id_descriptor = models.ForeignKey(  # ✅ Renomeado
+        TbDescriptorsCatalog, 
         on_delete=models.DO_NOTHING, 
-        db_column='id_distractor'
+        db_column='id_descriptor'
     )
     id_exam_application = models.ForeignKey(
         TbExamApplications, 
@@ -404,7 +405,7 @@ class TbStudentDistractorAchievements(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'tb_student_distractor_achievements'
+        db_table = 'tb_student_descriptor_achievements'  # ✅ Nome correto
         verbose_name = 'Conquista de Descritor'
         verbose_name_plural = 'Conquistas de Descritores'
 

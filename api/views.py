@@ -98,13 +98,14 @@ class TbCompetencyIdebViewSet(viewsets.ModelViewSet):
     search_fields = ['competency_code', 'competency_name']
 
 
-class TbDistractorCatalogViewSet(viewsets.ModelViewSet):
+# ✅ CORREÇÃO: Renomeado para DescriptorsCatalog
+class TbDescriptorsCatalogViewSet(viewsets.ModelViewSet):
     """Catálogo de Descritores"""
-    queryset = TbDistractorCatalog.objects.all()
-    serializer_class = TbDistractorCatalogSerializer
+    queryset = TbDescriptorsCatalog.objects.all()
+    serializer_class = TbDescriptorsCatalogSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['subject', 'grade', 'learning_field']
-    search_fields = ['distractor_code', 'distractor_name', 'distractor_description']
+    search_fields = ['descriptor_code', 'descriptor_name', 'descriptor_description']  # ✅ Corrigido
 
 
 # ============================================
@@ -123,17 +124,17 @@ class TbExamsViewSet(viewsets.ModelViewSet):
     def questions(self, request, pk=None):
         """Retorna todas as questões de um exame"""
         exam = self.get_object()
-        questions = TbQuestions.objects.filter(id_exam=exam).select_related('id_distractor')
+        questions = TbQuestions.objects.filter(id_exam=exam).select_related('id_descriptor')  # ✅ Corrigido
         serializer = TbQuestionsSerializer(questions, many=True)
         return Response(serializer.data)
 
 
 class TbQuestionsViewSet(viewsets.ModelViewSet):
     """Questões"""
-    queryset = TbQuestions.objects.all().select_related('id_exam', 'id_distractor')
+    queryset = TbQuestions.objects.all().select_related('id_exam', 'id_descriptor')  # ✅ Corrigido
     serializer_class = TbQuestionsSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['id_exam', 'difficulty_level', 'id_distractor']
+    filterset_fields = ['id_exam', 'difficulty_level', 'id_descriptor']  # ✅ Corrigido
     search_fields = ['question_text']
 
 
@@ -210,14 +211,15 @@ class TbExamResultsViewSet(viewsets.ModelViewSet):
 # VIEWSETS DE PROGRESSO E CONQUISTAS
 # ============================================
 
-class TbStudentDistractorAchievementsViewSet(viewsets.ModelViewSet):
+# ✅ CORREÇÃO: Renomeado para DescriptorAchievements
+class TbStudentDescriptorAchievementsViewSet(viewsets.ModelViewSet):
     """Conquistas de Descritores dos Alunos"""
-    queryset = TbStudentDistractorAchievements.objects.all().select_related(
-        'id_student', 'id_distractor'
+    queryset = TbStudentDescriptorAchievements.objects.all().select_related(
+        'id_student', 'id_descriptor'  # ✅ Corrigido
     )
-    serializer_class = TbStudentDistractorAchievementsSerializer
+    serializer_class = TbStudentDescriptorAchievementsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['id_student', 'id_distractor', 'id_exam_application']
+    filterset_fields = ['id_student', 'id_descriptor', 'id_exam_application']  # ✅ Corrigido
     ordering_fields = ['achieved_at']
 
 

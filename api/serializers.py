@@ -101,9 +101,10 @@ class TbCompetencyIdebSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class TbDistractorCatalogSerializer(serializers.ModelSerializer):
+# ✅ CORREÇÃO: Renomeado para DescriptorsCatalog
+class TbDescriptorsCatalogSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TbDistractorCatalog
+        model = TbDescriptorsCatalog
         fields = '__all__'
 
 
@@ -125,7 +126,7 @@ class TbAlternativesSerializer(serializers.ModelSerializer):
 
 class TbQuestionsSerializer(serializers.ModelSerializer):
     exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
-    distractor_name = serializers.CharField(source='id_distractor.distractor_name', read_only=True)
+    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)  # ✅ Corrigido
     alternatives = TbAlternativesSerializer(many=True, read_only=True, source='tbalternatives_set')
     
     class Meta:
@@ -134,7 +135,7 @@ class TbQuestionsSerializer(serializers.ModelSerializer):
             'id', 'id_exam', 'exam_name', 'question_number',
             'question_text', 'question_type', 'correct_answer',
             'skill_assessed', 'difficulty_level', 'points',
-            'id_distractor', 'distractor_name', 'alternatives', 'created_at'
+            'id_descriptor', 'descriptor_name', 'alternatives', 'created_at'  # ✅ Corrigido
         ]
 
 
@@ -210,15 +211,16 @@ class TbExamResultsSerializer(serializers.ModelSerializer):
 # SERIALIZERS DE PROGRESSO E CONQUISTAS
 # ============================================
 
-class TbStudentDistractorAchievementsSerializer(serializers.ModelSerializer):
+# ✅ CORREÇÃO: Renomeado para DescriptorAchievements
+class TbStudentDescriptorAchievementsSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
-    distractor_name = serializers.CharField(source='id_distractor.distractor_name', read_only=True)
+    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)  # ✅ Corrigido
     
     class Meta:
-        model = TbStudentDistractorAchievements
+        model = TbStudentDescriptorAchievements
         fields = [
-            'id', 'id_student', 'student_name', 'id_distractor',
-            'distractor_name', 'id_exam_application', 'achieved_at'
+            'id', 'id_student', 'student_name', 'id_descriptor',  # ✅ Corrigido
+            'descriptor_name', 'id_exam_application', 'achieved_at'  # ✅ Corrigido
         ]
 
 
