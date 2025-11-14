@@ -13,6 +13,7 @@ router.register(r'teachers', TbTeacherViewSet, basename='teacher')
 router.register(r'teacher-schools', TbTeacherSchoolViewSet, basename='teacher-school')
 router.register(r'classes', TbClassViewSet, basename='class')
 router.register(r'students', TbStudentsViewSet, basename='student')
+router.register(r'subjects', TbSubjectViewSet, basename='subject')  
 
 # ============================================
 # ROTAS DE INDICADORES IDEB

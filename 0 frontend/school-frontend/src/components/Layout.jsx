@@ -7,7 +7,8 @@ const Layout = () => {
 
   const navLinks = [
     { to: '/dashboard', label: 'Dashboard' },
-    { to: '/descriptors', label: 'Descritores' }
+    { to: '/descriptors', label: 'Descritores' },
+    { to: '/admin', label: 'Administração' },
   ];
 
   return (

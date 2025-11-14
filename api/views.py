@@ -64,7 +64,14 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
     filterset_fields = ['id_class', 'status']
     search_fields = ['student_name', 'student_serial']
 
-
+class TbSubjectViewSet(viewsets.ModelViewSet):
+    """Disciplinas (Subjects)"""
+    queryset = TbSubject.objects.all()
+    serializer_class = TbSubjectSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['subject_name', 'description']
+    ordering_fields = ['subject_name']
+    
 # ============================================
 # VIEWSETS DE INDICADORES IDEB
 # ============================================

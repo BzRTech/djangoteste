@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import DescriptorCatalog from './pages/DescriptorCatalog';
+import AdminCRUD from './pages/AdminCRUD';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="descriptors" element={<DescriptorCatalog />} />
+          <Route path="admin" element={<AdminCRUD />} />
         </Route>
       </Routes>
     </Router>

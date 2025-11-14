@@ -11,6 +11,10 @@ class TbCitySerializer(serializers.ModelSerializer):
         model = TbCity
         fields = '__all__'
 
+class TbSubjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TbSubject
+        fields = '__all__'
 
 class TbSchoolSerializer(serializers.ModelSerializer):
     city_name = serializers.CharField(source='id_city.city', read_only=True)

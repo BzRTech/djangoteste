@@ -110,6 +110,28 @@ class TbStudents(models.Model):
     def __str__(self):
         return self.student_name
 
+class TbSubject(models.Model):
+    id = models.AutoField(primary_key=True)
+    subject_name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        # Define o nome da tabela no banco de dados
+        db_table = 'subjects' 
+        # Define o nome legível no singular e plural
+        verbose_name = 'Disciplina'
+        verbose_name_plural = 'Disciplinas'
+        # Adiciona ordenação padrão
+        ordering = ['subject_name'] 
+
+    def __str__(self):
+        return self.subject_name
+
+
+
+
+
+
 
 # ============================================
 # MODELOS DE INDICADORES IDEB
