@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { Outlet, Link, NavLink } from 'react-router-dom';
-import { Menu, X, GraduationCap } from 'lucide-react';
+import React, { useState } from "react";
+import { Outlet, Link, NavLink } from "react-router-dom";
+import { Menu, X, GraduationCap } from "lucide-react";
 
 const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/descriptors', label: 'Descritores' },
-    { to: '/admin', label: 'Administração' },
+    { to: "/dashboard", label: "Dashboard" },
+    { to: "/descriptors", label: "Descritores" },
+    { to: "/admin", label: "Administração" },
+    { to: "/exams", label: "Provas" },
   ];
 
   return (
@@ -36,8 +37,8 @@ const Layout = () => {
                   className={({ isActive }) =>
                     `px-4 py-2 rounded-lg font-medium transition-colors ${
                       isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-600 hover:bg-blue-50 hover:text-blue-600"
                     }`
                   }
                 >
@@ -74,8 +75,8 @@ const Layout = () => {
                   className={({ isActive }) =>
                     `block px-3 py-2 rounded-md text-base font-medium ${
                       isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-600 hover:bg-blue-50 hover:text-blue-600"
                     }`
                   }
                 >

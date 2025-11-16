@@ -6,6 +6,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from students.models import *
 from .serializers import *
 
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
+from django.db import transaction
+from django.db.models import Count, Avg, Sum
 
 # ============================================
 # VIEWSETS DE LOCALIZAÇÃO E ESTRUTURA
@@ -258,3 +263,255 @@ class TbStudentLearningProgressViewSet(viewsets.ModelViewSet):
         progress = self.queryset.filter(competency_mastery__lt=threshold)
         serializer = self.get_serializer(progress, many=True)
         return Response(serializer.data)
+    
+# Adicione/substitua no arquivo api/views.py
+
+
+class TbExamsViewSet(viewsets.ModelViewSet):
+    """Exames com funcionalidades extras"""
+    queryset = TbExams.objects.all()
+    serializer_class = TbExamsSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['subject', 'school_year']
+    search_fields = ['exam_code', 'exam_name']
+    ordering_fields = ['created_at', 'exam_name']
+
+    def get_serializer_class(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return TbExamsDetailSerializer
+        return TbExamsSerializer
+
+    @action(detail=True, methods=['get'])
+    def questions(self, request, pk=None):
+        """Lista todas as questões do exame com alternativas"""
+        exam = self.get_object()
+        questions = TbQuestions.objects.filter(id_exam=exam).select_related('id_descriptor')
+        serializer = TbQuestionsSerializer(questions, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def statistics(self, request, pk=None):
+        """Estatísticas do exame"""
+        exam = self.get_object()
+        
+        applications = TbExamApplications.objects.filter(id_exam=exam)
+        results = TbExamResults.objects.filter(id_exam_application__id_exam=exam)
+        
+        stats = {
+            'total_applications': applications.count(),
+            'total_students': results.count(),
+            'average_score': results.aggregate(Avg('total_score'))['total_score__avg'] or 0,
+            'highest_score': results.aggregate(models.Max('total_score'))['total_score__max'] or 0,
+            'lowest_score': results.aggregate(models.Min('total_score'))['total_score__min'] or 0,
+            'total_questions': TbQuestions.objects.filter(id_exam=exam).count(),
+        }
+        
+        return Response(stats)
+
+
+class TbQuestionsViewSet(viewsets.ModelViewSet):
+    """Questões"""
+    queryset = TbQuestions.objects.all().select_related('id_exam', 'id_descriptor')
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['id_exam', 'difficulty_level', 'id_descriptor']
+    search_fields = ['question_text']
+    
+    def get_serializer_class(self):
+        if self.action == 'create' or self.action == 'update':
+            return TbQuestionsCreateSerializer
+        return TbQuestionsSerializer
+
+
+class TbExamApplicationsViewSet(viewsets.ModelViewSet):
+    """Aplicações de Exames"""
+    queryset = TbExamApplications.objects.all().select_related(
+        'id_exam', 'id_class', 'id_teacher'
+    )
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = [
+        'id_exam', 'id_class', 'id_teacher', 'status', 
+        'application_type', 'fiscal_year'
+    ]
+    ordering_fields = ['application_date', 'created_at']
+
+    def get_serializer_class(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return TbExamApplicationsDetailSerializer
+        return TbExamApplicationsSerializer
+
+    @action(detail=True, methods=['get'])
+    def students(self, request, pk=None):
+        """Lista alunos da turma que devem fazer a prova"""
+        application = self.get_object()
+        students = TbStudents.objects.filter(id_class=application.id_class)
+        
+        # Adiciona info se já tem resultado
+        students_data = []
+        for student in students:
+            has_result = TbExamResults.objects.filter(
+                id_student=student,
+                id_exam_application=application
+            ).exists()
+            
+            students_data.append({
+                'id_student': student.id_student,
+                'student_serial': student.student_serial,
+                'student_name': student.student_name,
+                'status': student.status,
+                'has_result': has_result
+            })
+        
+        return Response(students_data)
+
+    @action(detail=True, methods=['get'])
+    def results(self, request, pk=None):
+        """Retorna todos os resultados de uma aplicação"""
+        application = self.get_object()
+        results = TbExamResults.objects.filter(
+            id_exam_application=application
+        ).select_related('id_student')
+        serializer = TbExamResultsDetailSerializer(results, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def change_status(self, request, pk=None):
+        """Altera o status da aplicação"""
+        application = self.get_object()
+        new_status = request.data.get('status')
+        
+        if new_status not in ['scheduled', 'in_progress', 'completed', 'cancelled']:
+            return Response(
+                {'error': 'Status inválido'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        application.status = new_status
+        application.save()
+        
+        serializer = self.get_serializer(application)
+        return Response(serializer.data)
+
+
+class TbExamResultsViewSet(viewsets.ModelViewSet):
+    """Resultados dos Exames"""
+    queryset = TbExamResults.objects.all().select_related(
+        'id_student', 'id_exam_application'
+    )
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['id_student', 'id_exam_application']
+    ordering_fields = ['total_score', 'created_at']
+
+    def get_serializer_class(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return TbExamResultsDetailSerializer
+        return TbExamResultsSerializer
+
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """Criação em lote de resultados"""
+        results_data = request.data if isinstance(request.data, list) else [request.data]
+        
+        created_results = []
+        errors = []
+        
+        with transaction.atomic():
+            for data in results_data:
+                try:
+                    serializer = TbExamResultsSerializer(data=data)
+                    if serializer.is_valid():
+                        result = serializer.save()
+                        created_results.append(result)
+                    else:
+                        errors.append({
+                            'data': data,
+                            'errors': serializer.errors
+                        })
+                except Exception as e:
+                    errors.append({
+                        'data': data,
+                        'errors': str(e)
+                    })
+        
+        return Response({
+            'created': len(created_results),
+            'errors': errors
+        }, status=status.HTTP_201_CREATED if created_results else status.HTTP_400_BAD_REQUEST)
+
+
+class TbStudentAnswersViewSet(viewsets.ModelViewSet):
+    """Respostas dos Alunos"""
+    queryset = TbStudentAnswers.objects.all().select_related(
+        'id_student', 'id_question', 'id_selected_alternative'
+    )
+    serializer_class = TbStudentAnswersSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['id_student', 'id_exam_application', 'id_question', 'is_correct']
+
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """Lançamento em lote de respostas"""
+        serializer = BulkStudentAnswersSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        validated_data = serializer.validated_data
+        id_student = validated_data['id_student']
+        id_exam_application = validated_data['id_exam_application']
+        answers = validated_data['answers']
+        
+        created_answers = []
+        
+        with transaction.atomic():
+            for answer in answers:
+                # Verificar se a resposta está correta
+                question = TbQuestions.objects.get(id=answer['id_question'])
+                is_correct = answer.get('id_selected_alternative') == question.correct_answer
+                
+                student_answer = TbStudentAnswers.objects.create(
+                    id_student_id=id_student,
+                    id_exam_application_id=id_exam_application,
+                    id_question_id=answer['id_question'],
+                    id_selected_alternative_id=answer.get('id_selected_alternative'),
+                    answer_text=answer.get('answer_text', ''),
+                    is_correct=is_correct
+                )
+                created_answers.append(student_answer)
+            
+            # Calcular e criar resultado automático
+            self._calculate_exam_result(id_student, id_exam_application)
+        
+        return Response({
+            'message': 'Respostas registradas com sucesso',
+            'total_answers': len(created_answers)
+        }, status=status.HTTP_201_CREATED)
+    
+    def _calculate_exam_result(self, id_student, id_exam_application):
+        """Calcula resultado automático baseado nas respostas"""
+        answers = TbStudentAnswers.objects.filter(
+            id_student_id=id_student,
+            id_exam_application_id=id_exam_application
+        ).select_related('id_question')
+        
+        total_score = sum([
+            ans.id_question.points for ans in answers if ans.is_correct
+        ])
+        
+        max_score = sum([ans.id_question.points for ans in answers])
+        
+        correct_answers = answers.filter(is_correct=True).count()
+        wrong_answers = answers.filter(is_correct=False).count()
+        blank_answers = 0  # Você pode calcular isso de outra forma
+        
+        # Criar ou atualizar resultado
+        TbExamResults.objects.update_or_create(
+            id_student_id=id_student,
+            id_exam_application_id=id_exam_application,
+            defaults={
+                'total_score': total_score,
+                'max_score': max_score,
+                'correct_answers': correct_answers,
+                'wrong_answers': wrong_answers,
+                'blank_answers': blank_answers
+            }
+        )

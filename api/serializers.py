@@ -239,3 +239,116 @@ class TbStudentLearningProgressSerializer(serializers.ModelSerializer):
             'competency_name', 'id_exam_application', 'score',
             'max_score', 'competency_mastery', 'assessment_date', 'created_at'
         ]
+        
+# ============================================
+# SERIALIZERS DETALHADOS PARA PROVAS
+# ============================================
+
+class TbExamsDetailSerializer(serializers.ModelSerializer):
+    """Serializer detalhado com contagem de questões"""
+    questions_count = serializers.SerializerMethodField()
+    subject_name = serializers.CharField(source='subject', read_only=True)
+    
+    class Meta:
+        model = TbExams
+        fields = [
+            'id', 'exam_code', 'exam_name', 'subject', 'subject_name',
+            'school_year', 'total_questions', 'description', 
+            'questions_count', 'created_at'
+        ]
+    
+    def get_questions_count(self, obj):
+        return TbQuestions.objects.filter(id_exam=obj).count()
+
+
+class TbQuestionsCreateSerializer(serializers.ModelSerializer):
+    """Serializer para criação de questões"""
+    alternatives = TbAlternativesSerializer(many=True, required=False)
+    
+    class Meta:
+        model = TbQuestions
+        fields = [
+            'id', 'id_exam', 'question_number', 'question_text',
+            'question_type', 'correct_answer', 'skill_assessed',
+            'difficulty_level', 'points', 'id_descriptor', 'alternatives'
+        ]
+    
+    def create(self, validated_data):
+        alternatives_data = validated_data.pop('alternatives', [])
+        question = TbQuestions.objects.create(**validated_data)
+        
+        for alt_data in alternatives_data:
+            TbAlternatives.objects.create(id_question=question, **alt_data)
+        
+        return question
+
+
+class TbExamApplicationsDetailSerializer(serializers.ModelSerializer):
+    """Serializer detalhado para aplicações"""
+    exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
+    exam_subject = serializers.CharField(source='id_exam.subject', read_only=True)
+    class_name = serializers.CharField(source='id_class.class_name', read_only=True)
+    teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
+    school_name = serializers.CharField(source='id_class.id_school.school', read_only=True)
+    students_count = serializers.SerializerMethodField()
+    results_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TbExamApplications
+        fields = [
+            'id', 'id_exam', 'exam_name', 'exam_subject',
+            'id_class', 'class_name', 'school_name',
+            'id_teacher', 'teacher_name', 'application_date',
+            'start_time', 'end_time', 'status', 'observations',
+            'application_type', 'assessment_period', 'fiscal_year',
+            'students_count', 'results_count', 'created_at'
+        ]
+    
+    def get_students_count(self, obj):
+        return TbStudents.objects.filter(id_class=obj.id_class).count()
+    
+    def get_results_count(self, obj):
+        return TbExamResults.objects.filter(id_exam_application=obj).count()
+
+
+class TbExamResultsDetailSerializer(serializers.ModelSerializer):
+    """Serializer detalhado para resultados"""
+    student_name = serializers.CharField(source='id_student.student_name', read_only=True)
+    student_serial = serializers.IntegerField(source='id_student.student_serial', read_only=True)
+    class_name = serializers.CharField(source='id_student.id_class.class_name', read_only=True)
+    exam_name = serializers.CharField(source='id_exam_application.id_exam.exam_name', read_only=True)
+    percentage = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TbExamResults
+        fields = [
+            'id', 'id_student', 'student_name', 'student_serial', 'class_name',
+            'id_exam_application', 'exam_name', 'total_score', 'max_score',
+            'percentage', 'correct_answers', 'wrong_answers', 'blank_answers',
+            'completion_time_minutes', 'started_at', 'finished_at', 'created_at'
+        ]
+    
+    def get_percentage(self, obj):
+        if obj.max_score and obj.max_score > 0:
+            return round((obj.total_score / obj.max_score) * 100, 2)
+        return 0.0
+
+
+class BulkStudentAnswersSerializer(serializers.Serializer):
+    """Serializer para lançamento em lote de respostas"""
+    id_student = serializers.IntegerField()
+    id_exam_application = serializers.IntegerField()
+    answers = serializers.ListField(
+        child=serializers.DictField()
+    )
+    
+    def validate(self, data):
+        # Validar se o aluno existe
+        if not TbStudents.objects.filter(id_student=data['id_student']).exists():
+            raise serializers.ValidationError("Aluno não encontrado")
+        
+        # Validar se a aplicação existe
+        if not TbExamApplications.objects.filter(id=data['id_exam_application']).exists():
+            raise serializers.ValidationError("Aplicação de exame não encontrada")
+        
+        return data
