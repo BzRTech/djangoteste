@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { School, GraduationCap, BookOpen, Users, Plus, Edit2, Trash2, Save, X, Loader2 } from 'lucide-react';
+import Pagination from '../components/Pagination';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -11,10 +12,21 @@ const AdminCRUD = () => {
     classes: [],
     students: []
   });
+
+  // Estados de paginação
+  const [pagination, setPagination] = useState({
+    schools: { page: 1, total: 1, count: 0 },
+    teachers: { page: 1, total: 1, count: 0 },
+    classes: { page: 1, total: 1, count: 0 },
+    students: { page: 1, total: 1, count: 0 }
+  });
+
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
+  const ITEMS_PER_PAGE = 10;
 
   const tabs = [
     { id: 'schools', label: 'Escolas', icon: School, color: 'blue' },
@@ -26,16 +38,16 @@ const AdminCRUD = () => {
   useEffect(() => {
     fetchAllData();
     fetchCities();
-  }, []);
+  }, [pagination.schools.page, pagination.teachers.page, pagination.classes.page, pagination.students.page]);
 
   const fetchAllData = async () => {
     setLoading(true);
     try {
       const [schoolsRes, teachersRes, classesRes, studentsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/schools/`),
-        fetch(`${API_BASE_URL}/teachers/`),
-        fetch(`${API_BASE_URL}/classes/`),
-        fetch(`${API_BASE_URL}/students/`)
+        fetch(`${API_BASE_URL}/schools/?page=${pagination.schools.page}`),
+        fetch(`${API_BASE_URL}/teachers/?page=${pagination.teachers.page}`),
+        fetch(`${API_BASE_URL}/classes/?page=${pagination.classes.page}`),
+        fetch(`${API_BASE_URL}/students/?page=${pagination.students.page}`)
       ]);
 
       const [schools, teachers, classes, students] = await Promise.all([
@@ -46,10 +58,33 @@ const AdminCRUD = () => {
       ]);
 
       setData({
-        schools: Array.isArray(schools) ? schools : schools.results || [],
-        teachers: Array.isArray(teachers) ? teachers : teachers.results || [],
-        classes: Array.isArray(classes) ? classes : classes.results || [],
-        students: Array.isArray(students) ? students : students.results || []
+        schools: schools.results || [],
+        teachers: teachers.results || [],
+        classes: classes.results || [],
+        students: students.results || []
+      });
+
+      setPagination({
+        schools: {
+          page: pagination.schools.page,
+          total: Math.ceil((schools.count || 0) / ITEMS_PER_PAGE),
+          count: schools.count || 0
+        },
+        teachers: {
+          page: pagination.teachers.page,
+          total: Math.ceil((teachers.count || 0) / ITEMS_PER_PAGE),
+          count: teachers.count || 0
+        },
+        classes: {
+          page: pagination.classes.page,
+          total: Math.ceil((classes.count || 0) / ITEMS_PER_PAGE),
+          count: classes.count || 0
+        },
+        students: {
+          page: pagination.students.page,
+          total: Math.ceil((students.count || 0) / ITEMS_PER_PAGE),
+          count: students.count || 0
+        }
       });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -82,7 +117,7 @@ const AdminCRUD = () => {
       const response = await fetch(`${API_BASE_URL}/${endpoints[activeTab]}/${id}/`, {
         method: 'DELETE'
       });
-      
+
       if (response.ok) {
         fetchAllData();
       } else {
@@ -109,13 +144,19 @@ const AdminCRUD = () => {
     setEditingItem(null);
   };
 
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], page: newPage }
+    }));
+  };
+
   const colorClasses = {
     blue: 'bg-blue-600 hover:bg-blue-700',
     green: 'bg-green-600 hover:bg-green-700',
     purple: 'bg-purple-600 hover:bg-purple-700',
     orange: 'bg-orange-600 hover:bg-orange-700'
   };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -146,11 +187,10 @@ const AdminCRUD = () => {
                     setActiveTab(tab.id);
                     setShowForm(false);
                   }}
-                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                    isActive
+                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${isActive
                       ? 'border-b-2 border-blue-600 text-blue-600'
                       : 'text-gray-600 hover:text-gray-800'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   {tab.label}
@@ -165,13 +205,12 @@ const AdminCRUD = () => {
               <>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-2xl font-bold text-gray-800">
-                    {tabs.find(t => t.id === activeTab)?.label}
+                    {tabs.find(t => t.id === activeTab)?.label} ({pagination[activeTab].count})
                   </h2>
                   <button
                     onClick={handleNew}
-                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors ${
-                      colorClasses[tabs.find(t => t.id === activeTab)?.color]
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors ${colorClasses[tabs.find(t => t.id === activeTab)?.color]
+                      }`}
                   >
                     <Plus className="w-5 h-5" />
                     Adicionar
@@ -183,6 +222,17 @@ const AdminCRUD = () => {
                 {activeTab === 'teachers' && <TeachersTable data={data.teachers} onEdit={handleEdit} onDelete={handleDelete} />}
                 {activeTab === 'classes' && <ClassesTable data={data.classes} onEdit={handleEdit} onDelete={handleDelete} />}
                 {activeTab === 'students' && <StudentsTable data={data.students} onEdit={handleEdit} onDelete={handleDelete} />}
+
+                {/* Paginação */}
+                {pagination[activeTab].total > 1 && (
+                  <div className="mt-6 p-6 bg-gray-50 border-t border-gray-200">
+                    <Pagination
+                      currentPage={pagination[activeTab].page}
+                      totalPages={pagination[activeTab].total}
+                      onPageChange={handlePageChange}
+                    />
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -198,6 +248,7 @@ const AdminCRUD = () => {
     </div>
   );
 };
+
 
 // ============================================
 // TABELAS
@@ -263,8 +314,8 @@ const TeachersTable = ({ data, onEdit, onDelete }) => (
               <div className="flex flex-wrap gap-1">
                 {teacher.subject_details && teacher.subject_details.length > 0 ? (
                   teacher.subject_details.map((subject, index) => (
-                    <span 
-                      key={index} 
+                    <span
+                      key={index}
                       className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs whitespace-nowrap"
                     >
                       {subject}
@@ -382,10 +433,10 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
     setSaving(true);
 
     try {
-      const url = item 
+      const url = item
         ? `${API_BASE_URL}/schools/${item.id}/`
         : `${API_BASE_URL}/schools/`;
-      
+
       const method = item ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -411,14 +462,14 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h3 className="text-xl font-bold mb-4">{item ? 'Editar' : 'Nova'} Escola</h3>
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Escola *</label>
         <input
           type="text"
           required
           value={formData.school}
-          onChange={(e) => setFormData({...formData, school: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, school: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -428,7 +479,7 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
         <input
           type="text"
           value={formData.director_name}
-          onChange={(e) => setFormData({...formData, director_name: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, director_name: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -438,7 +489,7 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
         <select
           required
           value={formData.id_city}
-          onChange={(e) => setFormData({...formData, id_city: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, id_city: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Selecione uma cidade</option>
@@ -455,7 +506,7 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
         <input
           type="text"
           value={formData.address}
-          onChange={(e) => setFormData({...formData, address: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -540,10 +591,10 @@ const TeacherForm = ({ item, onClose, onSave }) => {
     setSaving(true);
 
     try {
-      const url = item 
+      const url = item
         ? `${API_BASE_URL}/teachers/${item.id}/`
         : `${API_BASE_URL}/teachers/`;
-      
+
       const method = item ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -580,14 +631,14 @@ const TeacherForm = ({ item, onClose, onSave }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h3 className="text-xl font-bold mb-4">{item ? 'Editar' : 'Novo'} Professor</h3>
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
         <input
           type="text"
           required
           value={formData.teacher_name}
-          onChange={(e) => setFormData({...formData, teacher_name: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, teacher_name: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
         />
       </div>
@@ -598,7 +649,7 @@ const TeacherForm = ({ item, onClose, onSave }) => {
           type="number"
           required
           value={formData.teacher_serial}
-          onChange={(e) => setFormData({...formData, teacher_serial: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, teacher_serial: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
         />
       </div>
@@ -607,7 +658,7 @@ const TeacherForm = ({ item, onClose, onSave }) => {
         <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
         <select
           value={formData.status}
-          onChange={(e) => setFormData({...formData, status: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
         >
           <option value="active">Ativo</option>
@@ -679,10 +730,10 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
     setSaving(true);
 
     try {
-      const url = item 
+      const url = item
         ? `${API_BASE_URL}/classes/${item.id}/`
         : `${API_BASE_URL}/classes/`;
-      
+
       const method = item ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -708,7 +759,7 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h3 className="text-xl font-bold mb-4">{item ? 'Editar' : 'Nova'} Turma</h3>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Turma *</label>
@@ -716,7 +767,7 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
             type="text"
             required
             value={formData.class_name}
-            onChange={(e) => setFormData({...formData, class_name: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -727,7 +778,7 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
             type="number"
             required
             value={formData.school_year}
-            onChange={(e) => setFormData({...formData, school_year: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, school_year: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -738,7 +789,7 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
         <select
           required
           value={formData.id_school}
-          onChange={(e) => setFormData({...formData, id_school: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, id_school: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Selecione uma escola</option>
@@ -755,7 +806,7 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
         <select
           required
           value={formData.id_teacher}
-          onChange={(e) => setFormData({...formData, id_teacher: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, id_teacher: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Selecione um professor</option>
@@ -773,7 +824,7 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
           <input
             type="text"
             value={formData.grade}
-            onChange={(e) => setFormData({...formData, grade: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             placeholder="Ex: 5º ano"
           />
@@ -783,7 +834,7 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
           <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
           <select
             value={formData.shift}
-            onChange={(e) => setFormData({...formData, shift: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Selecione um turno</option>
@@ -831,10 +882,10 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
     setSaving(true);
 
     try {
-      const url = item 
+      const url = item
         ? `${API_BASE_URL}/students/${item.id_student}/`
         : `${API_BASE_URL}/students/`;
-      
+
       const method = item ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -860,14 +911,14 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h3 className="text-xl font-bold mb-4">{item ? 'Editar' : 'Novo'} Aluno</h3>
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Aluno *</label>
         <input
           type="text"
           required
           value={formData.student_name}
-          onChange={(e) => setFormData({...formData, student_name: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, student_name: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -879,7 +930,7 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
             type="number"
             required
             value={formData.student_serial}
-            onChange={(e) => setFormData({...formData, student_serial: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, student_serial: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -889,7 +940,7 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
           <input
             type="date"
             value={formData.enrollment_date}
-            onChange={(e) => setFormData({...formData, enrollment_date: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, enrollment_date: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -900,7 +951,7 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
         <select
           required
           value={formData.id_class}
-          onChange={(e) => setFormData({...formData, id_class: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, id_class: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Selecione uma turma</option>
@@ -912,11 +963,11 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
         </select>
       </div>
 
-            <div>
+      <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
         <select
           value={formData.status}
-          onChange={(e) => setFormData({...formData, status: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="enrolled">Matriculado</option>

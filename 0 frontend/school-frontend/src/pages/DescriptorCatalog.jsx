@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import DescriptorStats from "../components/descriptors/DescriptorStats";
 import DescriptorFilters from "../components/descriptors/DescriptorFilters";
 import DescriptorList from "../components/descriptors/DescriptorList";
+import Pagination from "../components/Pagination";
 import { Loader2, AlertCircle, Target } from "lucide-react";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api";
@@ -11,6 +12,11 @@ const DescriptorCatalog = () => {
   const [filteredDescriptors, setFilteredDescriptors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Estados de paginação
+  const [descriptorPage, setDescriptorPage] = useState(1);
+  const [descriptorTotalPages, setDescriptorTotalPages] = useState(1);
+  const [descriptorCount, setDescriptorCount] = useState(0);
 
   // Estados de filtro
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,15 +29,15 @@ const DescriptorCatalog = () => {
   const [grades, setGrades] = useState([]);
   const [fields, setFields] = useState([]);
 
+  const ITEMS_PER_PAGE = 10;
+
   useEffect(() => {
     fetchDescriptors();
-  }, []);
+  }, [descriptorPage]);
 
-  // ✅ CORREÇÃO: Usar useCallback para evitar warning
   const filterDescriptors = useCallback(() => {
     let filtered = [...descriptors];
 
-    // Filtro por busca textual
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -42,17 +48,14 @@ const DescriptorCatalog = () => {
       );
     }
 
-    // Filtro por disciplina
     if (selectedSubject) {
       filtered = filtered.filter((d) => d.subject === selectedSubject);
     }
 
-    // Filtro por série
     if (selectedGrade) {
       filtered = filtered.filter((d) => d.grade === selectedGrade);
     }
 
-    // Filtro por campo de aprendizagem
     if (selectedField) {
       filtered = filtered.filter((d) => d.learning_field === selectedField);
     }
@@ -60,7 +63,6 @@ const DescriptorCatalog = () => {
     setFilteredDescriptors(filtered);
   }, [descriptors, searchTerm, selectedSubject, selectedGrade, selectedField]);
 
-  // ✅ Agora o useEffect só depende de filterDescriptors
   useEffect(() => {
     filterDescriptors();
   }, [filterDescriptors]);
@@ -68,18 +70,24 @@ const DescriptorCatalog = () => {
   const fetchDescriptors = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/descriptors/`);
+      const response = await fetch(
+        `${API_BASE_URL}/descriptors/?page=${descriptorPage}`
+      );
 
       if (!response.ok) {
         throw new Error("Erro ao buscar descritores");
       }
 
       const data = await response.json();
-      const descriptorsArray = Array.isArray(data) ? data : data.results || [];
+      const descriptorsArray = data.results || [];
 
       setDescriptors(descriptorsArray);
+      setDescriptorCount(data.count || 0);
+      setDescriptorTotalPages(
+        Math.ceil((data.count || 0) / ITEMS_PER_PAGE)
+      );
 
-      // Extrair valores únicos para filtros
+      // Extrair valores únicos para filtros (de todos os descritores)
       const uniqueSubjects = [
         ...new Set(descriptorsArray.map((d) => d.subject).filter(Boolean)),
       ];
@@ -196,6 +204,17 @@ const DescriptorCatalog = () => {
 
         {/* Lista de Descritores */}
         <DescriptorList filteredDescriptors={filteredDescriptors} />
+
+        {/* Paginação */}
+        {descriptorTotalPages > 1 && (
+          <div className="mt-8 p-6 bg-white rounded-xl shadow-lg border-t border-gray-200">
+            <Pagination
+              currentPage={descriptorPage}
+              totalPages={descriptorTotalPages}
+              onPageChange={setDescriptorPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
