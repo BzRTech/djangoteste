@@ -20,6 +20,14 @@ class TbSchoolSerializer(serializers.ModelSerializer):
         fields = ['id', 'school', 'director_name', 'id_city', 'city_name', 'state', 'address', 'created_at']
 
 
+# ✅ ADICIONE ESTE SERIALIZER AQUI
+class TbSubjectSerializer(serializers.ModelSerializer):
+    """Serializer para disciplinas"""
+    class Meta:
+        model = TbSubject
+        fields = '__all__'
+
+
 class TbTeacherSubjectSerializer(serializers.ModelSerializer):
     """Serializer para a tabela intermediária"""
     subject_name = serializers.CharField(source='id_subject.subject_name', read_only=True)
@@ -85,8 +93,7 @@ class TbTeacherSerializer(serializers.ModelSerializer):
                 )
         
         return instance
-
-
+    
 class TbTeacherSchoolSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
     school_name = serializers.CharField(source='id_school.school', read_only=True)
