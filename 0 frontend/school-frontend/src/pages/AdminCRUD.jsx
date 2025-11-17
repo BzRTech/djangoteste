@@ -256,13 +256,13 @@ const TeachersTable = ({ data, onEdit, onDelete }) => (
             <td className="px-6 py-4 text-sm text-gray-600">{teacher.teacher_serial}</td>
             <td className="px-6 py-4 text-sm">
               <span className={`px-2 py-1 rounded-full text-xs ${teacher.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                {teacher.status}
+                {teacher.status === 'active' ? 'Ativo' : 'Inativo'}
               </span>
             </td>
             <td className="px-6 py-4 text-sm">
               <div className="flex flex-wrap gap-1">
-                {teacher.subjects && teacher.subjects.length > 0 ? (
-                  teacher.subjects.map((subject, index) => (
+                {teacher.subject_details && teacher.subject_details.length > 0 ? (
+                  teacher.subject_details.map((subject, index) => (
                     <span 
                       key={index} 
                       className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs whitespace-nowrap"
@@ -487,14 +487,20 @@ const TeacherForm = ({ item, onClose, onSave }) => {
     teacher_name: item?.teacher_name || '',
     teacher_serial: item?.teacher_serial || '',
     status: item?.status || 'active',
-    subjects: item?.subjects || []
+    subjects: [] // IDs das disciplinas selecionadas
   });
   const [allSubjects, setAllSubjects] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchSubjects();
-  }, []);
+    if (item) {
+      fetchTeacherSubjects();
+    } else {
+      setLoading(false);
+    }
+  }, [item]);
 
   const fetchSubjects = async () => {
     try {
@@ -502,7 +508,21 @@ const TeacherForm = ({ item, onClose, onSave }) => {
       const data = await response.json();
       setAllSubjects(Array.isArray(data) ? data : data.results || []);
     } catch (error) {
-      console.error('Erro ao carregar matérias:', error);
+      console.error('Erro ao carregar disciplinas:', error);
+    }
+  };
+
+  const fetchTeacherSubjects = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/teachers/${item.id}/subjects/`);
+      const data = await response.json();
+      // Extrai apenas os IDs das disciplinas
+      const subjectIds = data.map(ts => ts.id_subject);
+      setFormData(prev => ({ ...prev, subjects: subjectIds }));
+    } catch (error) {
+      console.error('Erro ao carregar disciplinas do professor:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -536,7 +556,9 @@ const TeacherForm = ({ item, onClose, onSave }) => {
         onSave();
         onClose();
       } else {
-        throw new Error('Erro ao salvar');
+        const error = await response.json();
+        console.error('Erro ao salvar:', error);
+        alert('Erro ao salvar professor: ' + (error.detail || 'Erro desconhecido'));
       }
     } catch (error) {
       console.error('Erro ao salvar:', error);
@@ -545,6 +567,15 @@ const TeacherForm = ({ item, onClose, onSave }) => {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+        <span className="ml-2">Carregando...</span>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -585,19 +616,25 @@ const TeacherForm = ({ item, onClose, onSave }) => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Matérias</label>
-        <div className="grid grid-cols-2 gap-3 p-3 border border-gray-300 rounded-lg bg-gray-50">
-          {allSubjects.map((subject) => (
-            <label key={subject.id} className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.subjects.includes(subject.id)}
-                onChange={() => handleSubjectToggle(subject.id)}
-                className="w-4 h-4 text-green-600 rounded focus:ring-2"
-              />
-              <span className="ml-2 text-sm text-gray-700">{subject.subject_name}</span>
-            </label>
-          ))}
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Disciplinas ({formData.subjects.length} selecionadas)
+        </label>
+        <div className="grid grid-cols-2 gap-3 p-4 border border-gray-300 rounded-lg bg-gray-50 max-h-60 overflow-y-auto">
+          {allSubjects.length === 0 ? (
+            <p className="col-span-2 text-gray-500 text-center">Nenhuma disciplina cadastrada</p>
+          ) : (
+            allSubjects.map((subject) => (
+              <label key={subject.id} className="flex items-center hover:bg-gray-100 p-2 rounded cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.subjects.includes(subject.id)}
+                  onChange={() => handleSubjectToggle(subject.id)}
+                  className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">{subject.subject_name}</span>
+              </label>
+            ))
+          )}
         </div>
       </div>
 
@@ -605,15 +642,16 @@ const TeacherForm = ({ item, onClose, onSave }) => {
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Salvar
+          {saving ? 'Salvando...' : 'Salvar'}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 disabled:opacity-50"
         >
           <X className="w-4 h-4" />
           Cancelar
@@ -622,6 +660,8 @@ const TeacherForm = ({ item, onClose, onSave }) => {
     </form>
   );
 };
+
+
 
 const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
   const [formData, setFormData] = useState({

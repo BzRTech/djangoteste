@@ -11,11 +11,6 @@ class TbCitySerializer(serializers.ModelSerializer):
         model = TbCity
         fields = '__all__'
 
-class TbSubjectSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbSubject
-        fields = '__all__'
-
 class TbSchoolSerializer(serializers.ModelSerializer):
     city_name = serializers.CharField(source='id_city.city', read_only=True)
     state = serializers.CharField(source='id_city.state', read_only=True)
@@ -25,10 +20,71 @@ class TbSchoolSerializer(serializers.ModelSerializer):
         fields = ['id', 'school', 'director_name', 'id_city', 'city_name', 'state', 'address', 'created_at']
 
 
+class TbTeacherSubjectSerializer(serializers.ModelSerializer):
+    """Serializer para a tabela intermediária"""
+    subject_name = serializers.CharField(source='id_subject.subject_name', read_only=True)
+    
+    class Meta:
+        model = TbTeacherSubject
+        fields = ['id', 'id_teacher', 'id_subject', 'subject_name', 'created_at']
+
+
 class TbTeacherSerializer(serializers.ModelSerializer):
+    """Serializer com suporte a subjects many-to-many"""
+    subjects = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=TbSubject.objects.all(),
+        write_only=True,
+        required=False
+    )
+    subject_details = serializers.SerializerMethodField(read_only=True)
+    
     class Meta:
         model = TbTeacher
-        fields = '__all__'
+        fields = ['id', 'teacher_serial', 'teacher_name', 'status', 'created_at', 'subjects', 'subject_details']
+    
+    def get_subject_details(self, obj):
+        """Retorna lista de nomes das disciplinas"""
+        teacher_subjects = TbTeacherSubject.objects.filter(id_teacher=obj).select_related('id_subject')
+        return [ts.id_subject.subject_name for ts in teacher_subjects]
+    
+    def create(self, validated_data):
+        """Cria professor e associa disciplinas"""
+        subjects = validated_data.pop('subjects', [])
+        teacher = TbTeacher.objects.create(**validated_data)
+        
+        # Cria os relacionamentos
+        for subject in subjects:
+            TbTeacherSubject.objects.create(
+                id_teacher=teacher,
+                id_subject=subject
+            )
+        
+        return teacher
+    
+    def update(self, instance, validated_data):
+        """Atualiza professor e suas disciplinas"""
+        subjects = validated_data.pop('subjects', None)
+        
+        # Atualiza campos básicos
+        instance.teacher_name = validated_data.get('teacher_name', instance.teacher_name)
+        instance.teacher_serial = validated_data.get('teacher_serial', instance.teacher_serial)
+        instance.status = validated_data.get('status', instance.status)
+        instance.save()
+        
+        # Atualiza disciplinas se fornecidas
+        if subjects is not None:
+            # Remove relacionamentos antigos
+            TbTeacherSubject.objects.filter(id_teacher=instance).delete()
+            
+            # Cria novos relacionamentos
+            for subject in subjects:
+                TbTeacherSubject.objects.create(
+                    id_teacher=instance,
+                    id_subject=subject
+                )
+        
+        return instance
 
 
 class TbTeacherSchoolSerializer(serializers.ModelSerializer):

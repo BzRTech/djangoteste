@@ -34,14 +34,67 @@ class TbSchoolViewSet(viewsets.ModelViewSet):
     search_fields = ['school', 'director_name', 'address']
 
 
+# Substitua no arquivo api/views.py
+
 class TbTeacherViewSet(viewsets.ModelViewSet):
-    """Professores"""
+    """Professores com suporte a disciplinas"""
     queryset = TbTeacher.objects.all()
     serializer_class = TbTeacherSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status']
     search_fields = ['teacher_name', 'teacher_serial']
+    
+    @action(detail=True, methods=['get'])
+    def subjects(self, request, pk=None):
+        """Lista todas as disciplinas de um professor"""
+        teacher = self.get_object()
+        teacher_subjects = TbTeacherSubject.objects.filter(id_teacher=teacher).select_related('id_subject')
+        serializer = TbTeacherSubjectSerializer(teacher_subjects, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def add_subject(self, request, pk=None):
+        """Adiciona uma disciplina ao professor"""
+        teacher = self.get_object()
+        subject_id = request.data.get('subject_id')
+        
+        if not subject_id:
+            return Response({'error': 'subject_id é obrigatório'}, status=400)
+        
+        try:
+            subject = TbSubject.objects.get(id=subject_id)
+            TbTeacherSubject.objects.get_or_create(
+                id_teacher=teacher,
+                id_subject=subject
+            )
+            return Response({'message': 'Disciplina adicionada com sucesso'})
+        except TbSubject.DoesNotExist:
+            return Response({'error': 'Disciplina não encontrada'}, status=404)
+    
+    @action(detail=True, methods=['delete'])
+    def remove_subject(self, request, pk=None):
+        """Remove uma disciplina do professor"""
+        teacher = self.get_object()
+        subject_id = request.data.get('subject_id')
+        
+        if not subject_id:
+            return Response({'error': 'subject_id é obrigatório'}, status=400)
+        
+        deleted = TbTeacherSubject.objects.filter(
+            id_teacher=teacher,
+            id_subject_id=subject_id
+        ).delete()
+        
+        if deleted[0] > 0:
+            return Response({'message': 'Disciplina removida com sucesso'})
+        return Response({'error': 'Relacionamento não encontrado'}, status=404)
 
+class TbTeacherSubjectViewSet(viewsets.ModelViewSet):
+    """Relação Professor-Disciplina"""
+    queryset = TbTeacherSubject.objects.all().select_related('id_teacher', 'id_subject')
+    serializer_class = TbTeacherSubjectSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['id_teacher', 'id_subject']
 
 class TbTeacherSchoolViewSet(viewsets.ModelViewSet):
     """Relação Professor-Escola"""

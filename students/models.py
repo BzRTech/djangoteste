@@ -55,7 +55,23 @@ class TbTeacher(models.Model):
     def __str__(self):
         return self.teacher_name
 
+class TbTeacherSubject(models.Model):
+    """Tabela intermediária: Professor-Disciplina (Many-to-Many)"""
+    id = models.AutoField(primary_key=True)
+    id_teacher = models.ForeignKey(TbTeacher, on_delete=models.CASCADE, db_column='id_teacher', related_name='teacher_subjects')
+    id_subject = models.ForeignKey(TbSubject, on_delete=models.CASCADE, db_column='id_subject', related_name='subject_teachers')
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        managed = False
+        db_table = 'tb_teacher_subject'
+        verbose_name = 'Professor-Disciplina'
+        verbose_name_plural = 'Professores-Disciplinas'
+        unique_together = [['id_teacher', 'id_subject']]
+    
+    def __str__(self):
+        return f"{self.id_teacher.teacher_name} - {self.id_subject.subject_name}"
+    
 class TbTeacherSchool(models.Model):
     id = models.AutoField(primary_key=True)
     id_teacher = models.ForeignKey(TbTeacher, on_delete=models.DO_NOTHING, db_column='id_teacher')

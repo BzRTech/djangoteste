@@ -11,9 +11,10 @@ router.register(r'cities', TbCityViewSet, basename='city')
 router.register(r'schools', TbSchoolViewSet, basename='school')
 router.register(r'teachers', TbTeacherViewSet, basename='teacher')
 router.register(r'teacher-schools', TbTeacherSchoolViewSet, basename='teacher-school')
+router.register(r'teacher-subjects', TbTeacherSubjectViewSet, basename='teacher-subject')  # ⬅️ ADICIONE ESTA LINHA
 router.register(r'classes', TbClassViewSet, basename='class')
 router.register(r'students', TbStudentsViewSet, basename='student')
-router.register(r'subjects', TbSubjectViewSet, basename='subject')  
+router.register(r'subjects', TbSubjectViewSet, basename='subject')
 
 # ============================================
 # ROTAS DE INDICADORES IDEB
