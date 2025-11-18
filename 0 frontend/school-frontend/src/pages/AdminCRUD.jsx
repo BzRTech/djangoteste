@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { School, GraduationCap, BookOpen, Users, Plus, Edit2, Trash2, Save, X, Loader2 } from 'lucide-react';
 import Pagination from '../components/Pagination';
+import Loading from '../components/Loading';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -159,14 +160,12 @@ const AdminCRUD = () => {
   };
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-      </div>
+      <Loading/>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -200,7 +199,7 @@ const AdminCRUD = () => {
           </div>
 
           {/* Content */}
-          <div className="p-6">
+          <div className="p-6 bg-gray-50">
             {!showForm ? (
               <>
                 <div className="flex justify-between items-center mb-4">
@@ -274,7 +273,7 @@ const SchoolsTable = ({ data, onEdit, onDelete }) => (
             <td className="px-6 py-4 text-sm text-gray-600">{school.city_name || '-'}</td>
             <td className="px-6 py-4 text-sm text-gray-600">{school.state || '-'}</td>
             <td className="px-6 py-4 text-sm text-right">
-              <button onClick={() => onEdit(school)} className="text-blue-600 hover:text-blue-800 mr-3">
+              <button onClick={() => onEdit(school)} className="text-gray-600 hover:text-gray-800 mr-3">
                 <Edit2 className="w-4 h-4" />
               </button>
               <button onClick={() => onDelete(school.id)} className="text-red-600 hover:text-red-800">
@@ -356,14 +355,14 @@ const ClassesTable = ({ data, onEdit, onDelete }) => (
       </thead>
       <tbody className="divide-y divide-gray-200">
         {data.map((cls) => (
-          <tr key={cls.id} className="hover:bg-gray-50">
+          <tr key={cls.id} className="hover:bg-gray-100">
             <td className="px-6 py-4 text-sm font-medium text-gray-900">{cls.class_name}</td>
             <td className="px-6 py-4 text-sm text-gray-600">{cls.teacher_name || '-'}</td>
             <td className="px-6 py-4 text-sm text-gray-600">{cls.school_name || '-'}</td>
             <td className="px-6 py-4 text-sm text-gray-600">{cls.grade || '-'}</td>
             <td className="px-6 py-4 text-sm text-gray-600">{cls.school_year}</td>
             <td className="px-6 py-4 text-sm text-right">
-              <button onClick={() => onEdit(cls)} className="text-blue-600 hover:text-blue-800 mr-3">
+              <button onClick={() => onEdit(cls)} className="text-gray-600 hover:text-gray-800 mr-3">
                 <Edit2 className="w-4 h-4" />
               </button>
               <button onClick={() => onDelete(cls.id)} className="text-red-600 hover:text-red-800">

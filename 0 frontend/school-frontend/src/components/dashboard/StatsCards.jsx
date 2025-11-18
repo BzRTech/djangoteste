@@ -57,7 +57,7 @@ const StatsCards = ({ students, classes, teachers, schools }) => {
         return (
           <div 
             key={index}
-            className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow"
+            className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-shadow"
           >
             <div className="flex items-center justify-between">
               <div>

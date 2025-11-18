@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
-import { Menu, X, GraduationCap } from "lucide-react";
+import { Menu, X, GraduationCap, ImageOffIcon } from "lucide-react";
 
 const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -21,9 +21,9 @@ const Layout = () => {
             {/* Logo */}
             <div className="flex items-center">
               <Link to="/dashboard" className="flex items-center gap-2">
-                <GraduationCap className="w-8 h-8 text-blue-600" />
-                <span className="text-xl font-bold text-gray-800">
-                  Sistema Escolar
+                <ImageOffIcon className="w-10 h-10 text-gray-600" />
+                <span className="text-4xl font-bold text-gray-800">
+                  IDEB+
                 </span>
               </Link>
             </div>
@@ -37,8 +37,8 @@ const Layout = () => {
                   className={({ isActive }) =>
                     `px-4 py-2 rounded-lg font-medium transition-colors ${
                       isActive
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-600 hover:bg-blue-50 hover:text-blue-600"
+                        ? "bg-gray-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
                     }`
                   }
                 >

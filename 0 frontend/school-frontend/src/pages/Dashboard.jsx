@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Pagination from '../components/Pagination';
 import StatsCards from '../components/dashboard/StatsCards';
 import ChartsGrid from '../components/dashboard/ChartsGrid';
+import Loading from '../components/Loading';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -117,12 +118,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 text-lg">Carregando dados...</p>
-        </div>
-      </div>
+      <Loading/>
     );
   }
 
@@ -152,7 +148,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

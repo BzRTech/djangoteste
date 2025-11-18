@@ -13,6 +13,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+import Loading from "../components/Loading";
+
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 const ExamsManagement = () => {
@@ -116,14 +118,9 @@ const ExamsManagement = () => {
     { id: "results", label: "Resultados", icon: TrendingUp },
   ];
 
-  if (loading) {
+    if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600 text-lg">Carregando dados...</p>
-        </div>
-      </div>
+      <Loading/>
     );
   }
 
@@ -686,13 +683,13 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
     id_class: application?.id_class || '',
     id_teacher: application?.id_teacher || '',
     application_date: application?.application_date || new Date().toISOString().split('T')[0],
-    start_time: application?.start_time || '',
-    end_time: application?.end_time || '',
+    start_time: application?.start_time || '',           // ✅ Deve existir
+    end_time: application?.end_time || '',               // ✅ Deve existir
     status: application?.status || 'scheduled',
     observations: application?.observations || '',
     application_type: application?.application_type || '',
     assessment_period: application?.assessment_period || '',
-    fiscal_year: application?.fiscal_year || new Date().getFullYear(),
+    fiscal_year: application?.fiscal_year || new Date().getFullYear(),  // ✅ Deve existir
   });
   const [saving, setSaving] = useState(false);
 
@@ -701,14 +698,14 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
     setSaving(true);
 
     try {
-      // Remove campos vazios para evitar problemas de validação
+      // Remove campos vazios
       const cleanData = {
         id_exam: parseInt(formData.id_exam),
         id_class: parseInt(formData.id_class),
         id_teacher: parseInt(formData.id_teacher),
         application_date: formData.application_date,
         status: formData.status,
-        fiscal_year: parseInt(formData.fiscal_year),
+        fiscal_year: parseInt(formData.fiscal_year) || new Date().getFullYear(),
       };
 
       // Adiciona campos opcionais apenas se tiverem valor

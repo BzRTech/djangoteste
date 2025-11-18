@@ -321,6 +321,9 @@ class TbExamApplications(models.Model):
     id_class = models.ForeignKey(TbClass, on_delete=models.DO_NOTHING, db_column='id_class')
     id_teacher = models.ForeignKey(TbTeacher, on_delete=models.DO_NOTHING, db_column='id_teacher')
     application_date = models.DateField()
+    start_time = models.TimeField(blank=True, null=True)  # ✅ ADICIONAR
+    end_time = models.TimeField(blank=True, null=True)    # ✅ ADICIONAR
+    fiscal_year = models.IntegerField(blank=True, null=True)  # ✅ ADICIONAR
     status = models.CharField(max_length=50, default='scheduled')
     observations = models.TextField(blank=True, null=True)
     application_type = models.CharField(max_length=50, blank=True, null=True)
@@ -335,7 +338,6 @@ class TbExamApplications(models.Model):
 
     def __str__(self):
         return f"{self.id_exam.exam_name} - {self.id_class.class_name} ({self.application_date})"
-
 
 class TbAssessmentMetadata(models.Model):
     id = models.AutoField(primary_key=True)

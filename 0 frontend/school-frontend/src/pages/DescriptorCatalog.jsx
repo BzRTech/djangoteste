@@ -4,6 +4,7 @@ import DescriptorFilters from "../components/descriptors/DescriptorFilters";
 import DescriptorList from "../components/descriptors/DescriptorList";
 import Pagination from "../components/Pagination";
 import { Loader2, AlertCircle, Target } from "lucide-react";
+import Loading from "../components/Loading";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
@@ -170,16 +171,9 @@ const DescriptorCatalog = () => {
   const hasActiveFilters =
     searchTerm || selectedSubject || selectedGrade || selectedField;
 
-  if (loading) {
+    if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600 text-lg">
-            Carregando descritores...
-          </p>
-        </div>
-      </div>
+      <Loading/>
     );
   }
 
@@ -197,7 +191,7 @@ const DescriptorCatalog = () => {
           </p>
           <button
             onClick={fetchDescriptors}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
           >
             Tentar novamente
           </button>
@@ -207,7 +201,7 @@ const DescriptorCatalog = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
