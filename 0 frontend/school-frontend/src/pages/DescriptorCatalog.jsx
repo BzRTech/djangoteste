@@ -100,7 +100,7 @@ const DescriptorCatalog = () => {
 
       setSubjects(uniqueSubjects.sort());
       setGrades(uniqueGrades.sort());
-      setFields(uniqueFields.sort());
+      // setFields(uniqueFields.sort());
 
       setError(null);
     } catch (err) {

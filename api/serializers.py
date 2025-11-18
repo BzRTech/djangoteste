@@ -20,7 +20,6 @@ class TbSchoolSerializer(serializers.ModelSerializer):
         fields = ['id', 'school', 'director_name', 'id_city', 'city_name', 'state', 'address', 'created_at']
 
 
-# ✅ ADICIONE ESTE SERIALIZER AQUI
 class TbSubjectSerializer(serializers.ModelSerializer):
     """Serializer para disciplinas"""
     class Meta:
@@ -168,7 +167,6 @@ class TbCompetencyIdebSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# ✅ CORREÇÃO: Renomeado para DescriptorsCatalog
 class TbDescriptorsCatalogSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbDescriptorsCatalog
@@ -193,7 +191,7 @@ class TbAlternativesSerializer(serializers.ModelSerializer):
 
 class TbQuestionsSerializer(serializers.ModelSerializer):
     exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
-    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)  # ✅ Corrigido
+    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)
     alternatives = TbAlternativesSerializer(many=True, read_only=True, source='tbalternatives_set')
     
     class Meta:
@@ -202,7 +200,7 @@ class TbQuestionsSerializer(serializers.ModelSerializer):
             'id', 'id_exam', 'exam_name', 'question_number',
             'question_text', 'question_type', 'correct_answer',
             'skill_assessed', 'difficulty_level', 'points',
-            'id_descriptor', 'descriptor_name', 'alternatives', 'created_at'  # ✅ Corrigido
+            'id_descriptor', 'descriptor_name', 'alternatives', 'created_at'
         ]
 
 
@@ -232,6 +230,51 @@ class TbExamApplicationsSerializer(serializers.ModelSerializer):
             'start_time', 'end_time', 'status', 'observations',
             'application_type', 'assessment_period', 'fiscal_year', 'created_at'
         ]
+        # Torna os campos de tempo opcionais
+        extra_kwargs = {
+            'start_time': {'required': False, 'allow_null': True},
+            'end_time': {'required': False, 'allow_null': True},
+            'observations': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'application_type': {'required': False, 'allow_null': True},
+            'assessment_period': {'required': False, 'allow_null': True},
+            'fiscal_year': {'required': False, 'allow_null': True},
+        }
+
+
+class TbExamApplicationsDetailSerializer(serializers.ModelSerializer):
+    """Serializer detalhado para aplicações"""
+    exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
+    exam_subject = serializers.CharField(source='id_exam.subject', read_only=True)
+    class_name = serializers.CharField(source='id_class.class_name', read_only=True)
+    teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
+    school_name = serializers.CharField(source='id_class.id_school.school', read_only=True)
+    students_count = serializers.SerializerMethodField()
+    results_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TbExamApplications
+        fields = [
+            'id', 'id_exam', 'exam_name', 'exam_subject',
+            'id_class', 'class_name', 'school_name',
+            'id_teacher', 'teacher_name', 'application_date',
+            'start_time', 'end_time', 'status', 'observations',
+            'application_type', 'assessment_period', 'fiscal_year',
+            'students_count', 'results_count', 'created_at'
+        ]
+        extra_kwargs = {
+            'start_time': {'required': False, 'allow_null': True},
+            'end_time': {'required': False, 'allow_null': True},
+            'observations': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'application_type': {'required': False, 'allow_null': True},
+            'assessment_period': {'required': False, 'allow_null': True},
+            'fiscal_year': {'required': False, 'allow_null': True},
+        }
+    
+    def get_students_count(self, obj):
+        return TbStudents.objects.filter(id_class=obj.id_class).count()
+    
+    def get_results_count(self, obj):
+        return TbExamResults.objects.filter(id_exam_application=obj).count()
 
 
 class TbAssessmentMetadataSerializer(serializers.ModelSerializer):
@@ -261,6 +304,7 @@ class TbStudentAnswersSerializer(serializers.ModelSerializer):
 
 
 class TbExamResultsSerializer(serializers.ModelSerializer):
+    """Serializer básico para resultados"""
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
     exam_name = serializers.CharField(source='id_exam_application.id_exam.exam_name', read_only=True)
     
@@ -274,20 +318,42 @@ class TbExamResultsSerializer(serializers.ModelSerializer):
         ]
 
 
+class TbExamResultsDetailSerializer(serializers.ModelSerializer):
+    """Serializer DETALHADO para resultados com informações completas"""
+    student_name = serializers.CharField(source='id_student.student_name', read_only=True)
+    student_serial = serializers.IntegerField(source='id_student.student_serial', read_only=True)
+    class_name = serializers.CharField(source='id_student.id_class.class_name', read_only=True)
+    exam_name = serializers.CharField(source='id_exam_application.id_exam.exam_name', read_only=True)
+    percentage = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TbExamResults
+        fields = [
+            'id', 'id_student', 'student_name', 'student_serial', 'class_name',
+            'id_exam_application', 'exam_name', 'total_score', 'max_score',
+            'percentage', 'correct_answers', 'wrong_answers', 'blank_answers',
+            'completion_time_minutes', 'started_at', 'finished_at', 'created_at'
+        ]
+    
+    def get_percentage(self, obj):
+        if obj.max_score and obj.max_score > 0:
+            return round((obj.total_score / obj.max_score) * 100, 2)
+        return 0.0
+
+
 # ============================================
 # SERIALIZERS DE PROGRESSO E CONQUISTAS
 # ============================================
 
-# ✅ CORREÇÃO: Renomeado para DescriptorAchievements
 class TbStudentDescriptorAchievementsSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
-    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)  # ✅ Corrigido
+    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)
     
     class Meta:
         model = TbStudentDescriptorAchievements
         fields = [
-            'id', 'id_student', 'student_name', 'id_descriptor',  # ✅ Corrigido
-            'descriptor_name', 'id_exam_application', 'achieved_at'  # ✅ Corrigido
+            'id', 'id_student', 'student_name', 'id_descriptor',
+            'descriptor_name', 'id_exam_application', 'achieved_at'
         ]
 
 
@@ -302,6 +368,7 @@ class TbStudentLearningProgressSerializer(serializers.ModelSerializer):
             'competency_name', 'id_exam_application', 'score',
             'max_score', 'competency_mastery', 'assessment_date', 'created_at'
         ]
+
         
 # ============================================
 # SERIALIZERS DETALHADOS PARA PROVAS
@@ -344,57 +411,6 @@ class TbQuestionsCreateSerializer(serializers.ModelSerializer):
             TbAlternatives.objects.create(id_question=question, **alt_data)
         
         return question
-
-
-class TbExamApplicationsDetailSerializer(serializers.ModelSerializer):
-    """Serializer detalhado para aplicações"""
-    exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
-    exam_subject = serializers.CharField(source='id_exam.subject', read_only=True)
-    class_name = serializers.CharField(source='id_class.class_name', read_only=True)
-    teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
-    school_name = serializers.CharField(source='id_class.id_school.school', read_only=True)
-    students_count = serializers.SerializerMethodField()
-    results_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = TbExamApplications
-        fields = [
-            'id', 'id_exam', 'exam_name', 'exam_subject',
-            'id_class', 'class_name', 'school_name',
-            'id_teacher', 'teacher_name', 'application_date',
-            'start_time', 'end_time', 'status', 'observations',
-            'application_type', 'assessment_period', 'fiscal_year',
-            'students_count', 'results_count', 'created_at'
-        ]
-    
-    def get_students_count(self, obj):
-        return TbStudents.objects.filter(id_class=obj.id_class).count()
-    
-    def get_results_count(self, obj):
-        return TbExamResults.objects.filter(id_exam_application=obj).count()
-
-
-class TbExamResultsDetailSerializer(serializers.ModelSerializer):
-    """Serializer detalhado para resultados"""
-    student_name = serializers.CharField(source='id_student.student_name', read_only=True)
-    student_serial = serializers.IntegerField(source='id_student.student_serial', read_only=True)
-    class_name = serializers.CharField(source='id_student.id_class.class_name', read_only=True)
-    exam_name = serializers.CharField(source='id_exam_application.id_exam.exam_name', read_only=True)
-    percentage = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = TbExamResults
-        fields = [
-            'id', 'id_student', 'student_name', 'student_serial', 'class_name',
-            'id_exam_application', 'exam_name', 'total_score', 'max_score',
-            'percentage', 'correct_answers', 'wrong_answers', 'blank_answers',
-            'completion_time_minutes', 'started_at', 'finished_at', 'created_at'
-        ]
-    
-    def get_percentage(self, obj):
-        if obj.max_score and obj.max_score > 0:
-            return round((obj.total_score / obj.max_score) * 100, 2)
-        return 0.0
 
 
 class BulkStudentAnswersSerializer(serializers.Serializer):

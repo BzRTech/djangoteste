@@ -321,13 +321,10 @@ class TbExamApplications(models.Model):
     id_class = models.ForeignKey(TbClass, on_delete=models.DO_NOTHING, db_column='id_class')
     id_teacher = models.ForeignKey(TbTeacher, on_delete=models.DO_NOTHING, db_column='id_teacher')
     application_date = models.DateField()
-    start_time = models.TimeField(blank=True, null=True)
-    end_time = models.TimeField(blank=True, null=True)
     status = models.CharField(max_length=50, default='scheduled')
     observations = models.TextField(blank=True, null=True)
     application_type = models.CharField(max_length=50, blank=True, null=True)
     assessment_period = models.CharField(max_length=50, blank=True, null=True)
-    fiscal_year = models.BigIntegerField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
