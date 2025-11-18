@@ -6,11 +6,14 @@ import ChartsGrid from '../components/dashboard/ChartsGrid';
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 const Dashboard = () => {
-  // Estados de dados
-  const [students, setStudents] = useState([]);
-  const [classes, setClasses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
-  const [schools, setSchools] = useState([]);
+  // Estados de dados - TODOS os dados (para gráficos)
+  const [allStudents, setAllStudents] = useState([]);
+  const [allClasses, setAllClasses] = useState([]);
+  const [allTeachers, setAllTeachers] = useState([]);
+  const [allSchools, setAllSchools] = useState([]);
+
+  // Estados de dados - página atual (para tabela)
+  const [pagedStudents, setPagedStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -23,58 +26,90 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, [studentPage]); // Recarrega quando muda de página
+  }, [studentPage]);
+
+  // Função helper para buscar TODOS os dados de um endpoint (sem paginação)
+  const fetchAllData = async (endpoint) => {
+    let allData = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}?page=${page}`);
+        const data = await response.json();
+
+        if (data.results) {
+          allData = allData.concat(data.results);
+          // Se a resposta tem menos itens que PAGE_SIZE, chegou ao final
+          if (data.results.length < 10) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else if (Array.isArray(data)) {
+          allData = data;
+          hasMore = false;
+        } else {
+          hasMore = false;
+        }
+      } catch (err) {
+        console.error(`Erro ao buscar dados de ${endpoint}:`, err);
+        hasMore = false;
+      }
+    }
+
+    return allData;
+  };
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      const [studentsRes, classesRes, teachersRes, schoolsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/students/?page=${studentPage}`),
-        fetch(`${API_BASE_URL}/classes/`),
-        fetch(`${API_BASE_URL}/teachers/`),
-        fetch(`${API_BASE_URL}/schools/`)
+      // Buscar TODOS os dados para gráficos
+      const [
+        allStudentsArray,
+        allClassesArray,
+        allTeachersArray,
+        allSchoolsArray,
+        pagedStudentsRes
+      ] = await Promise.all([
+        fetchAllData('/students/'),
+        fetchAllData('/classes/'),
+        fetchAllData('/teachers/'),
+        fetchAllData('/schools/'),
+        fetch(`${API_BASE_URL}/students/?page=${studentPage}`)
       ]);
 
-      const [studentsData, classesData, teachersData, schoolsData] = await Promise.all([
-        studentsRes.json(),
-        classesRes.json(),
-        teachersRes.json(),
-        schoolsRes.json()
-      ]);
+      // Salva todos os dados para gráficos
+      setAllStudents(allStudentsArray);
+      setAllClasses(allClassesArray);
+      setAllTeachers(allTeachersArray);
+      setAllSchools(allSchoolsArray);
 
-      // Processa dados de estudantes (com paginação)
-      if (studentsData.results) {
-        setStudents(studentsData.results);
-        setStudentCount(studentsData.count || 0);
-        setStudentTotalPages(Math.ceil((studentsData.count || 0) / ITEMS_PER_PAGE));
+      // Processa dados de estudantes PAGINADOS (para tabela)
+      const pagedStudentsData = await pagedStudentsRes.json();
+      
+      if (pagedStudentsData.results) {
+        setPagedStudents(pagedStudentsData.results);
+        setStudentCount(pagedStudentsData.count || 0);
+        setStudentTotalPages(Math.ceil((pagedStudentsData.count || 0) / ITEMS_PER_PAGE));
       } else {
-        const studentArray = Array.isArray(studentsData) ? studentsData : [];
-        setStudents(studentArray.slice((studentPage - 1) * ITEMS_PER_PAGE, studentPage * ITEMS_PER_PAGE));
+        const studentArray = Array.isArray(pagedStudentsData) ? pagedStudentsData : [];
+        setPagedStudents(studentArray.slice((studentPage - 1) * ITEMS_PER_PAGE, studentPage * ITEMS_PER_PAGE));
         setStudentCount(studentArray.length);
         setStudentTotalPages(Math.ceil(studentArray.length / ITEMS_PER_PAGE));
       }
-
-      // Processa dados de turmas
-      const classArray = Array.isArray(classesData) ? classesData : (classesData.results || []);
-      setClasses(classArray);
-
-      // Processa dados de professores
-      const teacherArray = Array.isArray(teachersData) ? teachersData : (teachersData.results || []);
-      setTeachers(teacherArray);
-
-      // Processa dados de escolas
-      const schoolArray = Array.isArray(schoolsData) ? schoolsData : (schoolsData.results || []);
-      setSchools(schoolArray);
 
       setError(null);
     } catch (err) {
       console.error('Erro:', err);
       setError(err.message);
-      setStudents([]);
-      setClasses([]);
-      setTeachers([]);
-      setSchools([]);
+      setAllStudents([]);
+      setAllClasses([]);
+      setAllTeachers([]);
+      setAllSchools([]);
+      setPagedStudents([]);
     } finally {
       setLoading(false);
     }
@@ -125,21 +160,21 @@ const Dashboard = () => {
           <p className="text-gray-600">Visão geral do sistema de gestão educacional</p>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Com TODOS os dados */}
         <StatsCards 
-          students={students}
-          classes={classes}
-          teachers={teachers}
-          schools={schools}
+          students={allStudents}
+          classes={allClasses}
+          teachers={allTeachers}
+          schools={allSchools}
         />
 
-        {/* Charts */}
+        {/* Charts - Com TODOS os dados */}
         <ChartsGrid 
-          students={students}
-          classes={classes}
+          students={allStudents}
+          classes={allClasses}
         />
 
-        {/* Tabela de Alunos com Paginação */}
+        {/* Tabela de Alunos com Paginação - Apenas página atual */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-xl font-bold text-gray-800">
@@ -172,14 +207,14 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {students.length === 0 ? (
+                {pagedStudents.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                       Nenhum aluno encontrado
                     </td>
                   </tr>
                 ) : (
-                  students.map((student) => (
+                  pagedStudents.map((student) => (
                     <tr key={student.id_student} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {student.id_student}

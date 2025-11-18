@@ -8,7 +8,13 @@ import { Loader2, AlertCircle, Target } from "lucide-react";
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 const DescriptorCatalog = () => {
-  const [descriptors, setDescriptors] = useState([]);
+  // Estados para TODOS os descritores (para filtros e contadores)
+  const [allDescriptors, setAllDescriptors] = useState([]);
+  
+  // Estados para descritores PAGINADOS (para exibição)
+  const [pagedDescriptors, setPagedDescriptors] = useState([]);
+  
+  // Estados de filtros e busca
   const [filteredDescriptors, setFilteredDescriptors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,19 +30,91 @@ const DescriptorCatalog = () => {
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedField, setSelectedField] = useState("");
 
-  // Opções únicas para filtros
+  // Opções únicas para filtros (extraídas de TODOS os descritores)
   const [subjects, setSubjects] = useState([]);
   const [grades, setGrades] = useState([]);
   const [fields, setFields] = useState([]);
 
   const ITEMS_PER_PAGE = 10;
 
+  // Função helper para buscar TODOS os dados de um endpoint (sem paginação)
+  const fetchAllData = async (endpoint) => {
+    let allData = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}?page=${page}`);
+        const data = await response.json();
+
+        if (data.results) {
+          allData = allData.concat(data.results);
+          // Se a resposta tem menos itens que PAGE_SIZE, chegou ao final
+          if (data.results.length < 10) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else if (Array.isArray(data)) {
+          allData = data;
+          hasMore = false;
+        } else {
+          hasMore = false;
+        }
+      } catch (err) {
+        console.error(`Erro ao buscar dados de ${endpoint}:`, err);
+        hasMore = false;
+      }
+    }
+
+    return allData;
+  };
+
   useEffect(() => {
     fetchDescriptors();
-  }, [descriptorPage]);
+  }, []);
 
+  const fetchDescriptors = async () => {
+    try {
+      setLoading(true);
+
+      // Busca TODOS os descritores
+      const allDescriptorsArray = await fetchAllData('/descriptors/');
+      
+      setAllDescriptors(allDescriptorsArray);
+      setDescriptorCount(allDescriptorsArray.length);
+
+      // Extrair valores únicos para filtros (de TODOS os descritores)
+      const uniqueSubjects = [
+        ...new Set(allDescriptorsArray.map((d) => d.subject).filter(Boolean)),
+      ];
+      const uniqueGrades = [
+        ...new Set(allDescriptorsArray.map((d) => d.grade).filter(Boolean)),
+      ];
+      const uniqueFields = [
+        ...new Set(
+          allDescriptorsArray.map((d) => d.learning_field).filter(Boolean)
+        ),
+      ];
+
+      setSubjects(uniqueSubjects.sort());
+      setGrades(uniqueGrades.sort());
+      setFields(uniqueFields.sort());
+
+      setError(null);
+    } catch (err) {
+      console.error("Erro:", err);
+      setError(err.message);
+      setAllDescriptors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filtra TODOS os descritores baseado nos critérios
   const filterDescriptors = useCallback(() => {
-    let filtered = [...descriptors];
+    let filtered = [...allDescriptors];
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -61,64 +139,32 @@ const DescriptorCatalog = () => {
     }
 
     setFilteredDescriptors(filtered);
-  }, [descriptors, searchTerm, selectedSubject, selectedGrade, selectedField]);
+
+    // Calcula paginação baseado nos filtros
+    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+    setDescriptorTotalPages(totalPages);
+    
+    // Reset para página 1 quando filtros mudam
+    setDescriptorPage(1);
+  }, [allDescriptors, searchTerm, selectedSubject, selectedGrade, selectedField]);
 
   useEffect(() => {
     filterDescriptors();
   }, [filterDescriptors]);
 
-  const fetchDescriptors = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/descriptors/?page=${descriptorPage}`
-      );
-
-      if (!response.ok) {
-        throw new Error("Erro ao buscar descritores");
-      }
-
-      const data = await response.json();
-      const descriptorsArray = data.results || [];
-
-      setDescriptors(descriptorsArray);
-      setDescriptorCount(data.count || 0);
-      setDescriptorTotalPages(
-        Math.ceil((data.count || 0) / ITEMS_PER_PAGE)
-      );
-
-      // Extrair valores únicos para filtros (de todos os descritores)
-      const uniqueSubjects = [
-        ...new Set(descriptorsArray.map((d) => d.subject).filter(Boolean)),
-      ];
-      const uniqueGrades = [
-        ...new Set(descriptorsArray.map((d) => d.grade).filter(Boolean)),
-      ];
-      const uniqueFields = [
-        ...new Set(
-          descriptorsArray.map((d) => d.learning_field).filter(Boolean)
-        ),
-      ];
-
-      setSubjects(uniqueSubjects.sort());
-      setGrades(uniqueGrades.sort());
-      setFields(uniqueFields.sort());
-
-      setError(null);
-    } catch (err) {
-      console.error("Erro:", err);
-      setError(err.message);
-      setDescriptors([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Pagina os descritores já filtrados
+  useEffect(() => {
+    const startIndex = (descriptorPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    setPagedDescriptors(filteredDescriptors.slice(startIndex, endIndex));
+  }, [filteredDescriptors, descriptorPage]);
 
   const clearFilters = () => {
     setSearchTerm("");
     setSelectedSubject("");
     setSelectedGrade("");
     setSelectedField("");
+    setDescriptorPage(1);
   };
 
   const hasActiveFilters =
@@ -177,9 +223,9 @@ const DescriptorCatalog = () => {
           </p>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Com TODOS os descritores */}
         <DescriptorStats
-          descriptors={descriptors}
+          descriptors={allDescriptors}
           subjects={subjects}
           grades={grades}
           filteredDescriptors={filteredDescriptors}
@@ -202,8 +248,8 @@ const DescriptorCatalog = () => {
           clearFilters={clearFilters}
         />
 
-        {/* Lista de Descritores */}
-        <DescriptorList filteredDescriptors={filteredDescriptors} />
+        {/* Lista de Descritores - Com descritores PAGINADOS */}
+        <DescriptorList filteredDescriptors={pagedDescriptors} />
 
         {/* Paginação */}
         {descriptorTotalPages > 1 && (
