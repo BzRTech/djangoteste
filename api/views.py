@@ -496,3 +496,122 @@ class TbStudentLearningProgressViewSet(viewsets.ModelViewSet):
         progress = self.queryset.filter(competency_mastery__lt=threshold)
         serializer = self.get_serializer(progress, many=True)
         return Response(serializer.data)
+    
+class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
+    """Perfil completo do aluno com descritores conquistados"""
+    queryset = TbStudents.objects.all()
+    serializer_class = TbStudentsSerializer
+    lookup_field = 'id_student'
+    
+    @action(detail=True, methods=['get'])
+    def profile(self, request, id_student=None):
+        """Retorna perfil completo do aluno"""
+        try:
+            student = self.get_object()
+            
+            # Dados básicos do aluno
+            profile_data = {
+                'id_student': student.id_student,
+                'student_serial': student.student_serial,
+                'student_name': student.student_name,
+                'status': student.status,
+                'enrollment_date': student.enrollment_date,
+                'class_name': student.id_class.class_name if student.id_class else None,
+                'school_name': student.id_class.id_school.school if student.id_class else None,
+                'grade': student.id_class.grade if student.id_class else None,
+            }
+            
+            # Descritores conquistados
+            achievements = TbStudentDescriptorAchievements.objects.filter(
+                id_student=student
+            ).select_related('id_descriptor', 'id_exam_application')
+            
+            descriptors_achieved = []
+            for achievement in achievements:
+                descriptors_achieved.append({
+                    'id': achievement.id_descriptor.id,
+                    'descriptor_code': achievement.id_descriptor.descriptor_code,
+                    'descriptor_name': achievement.id_descriptor.descriptor_name,
+                    'subject': achievement.id_descriptor.subject,
+                    'learning_field': achievement.id_descriptor.learning_field,
+                    'icon': achievement.id_descriptor.icon,
+                    'achieved_at': achievement.achieved_at,
+                    'exam_name': achievement.id_exam_application.id_exam.exam_name if achievement.id_exam_application else None,
+                })
+            
+            # Todos os descritores do catálogo (para comparação)
+            all_descriptors = TbDescriptorsCatalog.objects.all()
+            total_descriptors = all_descriptors.count()
+            achieved_count = len(descriptors_achieved)
+            
+            # Agrupa descritores por disciplina
+            descriptors_by_subject = {}
+            for desc in all_descriptors:
+                subject = desc.subject or 'Outros'
+                if subject not in descriptors_by_subject:
+                    descriptors_by_subject[subject] = {
+                        'total': 0,
+                        'achieved': 0,
+                        'descriptors': []
+                    }
+                descriptors_by_subject[subject]['total'] += 1
+                descriptors_by_subject[subject]['descriptors'].append({
+                    'id': desc.id,
+                    'code': desc.descriptor_code,
+                    'name': desc.descriptor_name,
+                    'achieved': any(d['id'] == desc.id for d in descriptors_achieved)
+                })
+                
+                # Conta conquistados
+                if any(d['id'] == desc.id for d in descriptors_achieved):
+                    descriptors_by_subject[subject]['achieved'] += 1
+            
+            # Estatísticas de progresso
+            learning_progress = TbStudentLearningProgress.objects.filter(
+                id_student=student
+            ).select_related('id_competency').order_by('-assessment_date')[:5]
+            
+            recent_progress = []
+            for progress in learning_progress:
+                recent_progress.append({
+                    'competency_name': progress.id_competency.competency_name,
+                    'competency_mastery': float(progress.competency_mastery),
+                    'assessment_date': progress.assessment_date,
+                    'score': float(progress.score),
+                    'max_score': float(progress.max_score),
+                })
+            
+            # Últimos resultados de provas
+            exam_results = TbExamResults.objects.filter(
+                id_student=student
+            ).select_related('id_exam_application__id_exam').order_by('-created_at')[:5]
+            
+            recent_exams = []
+            for result in exam_results:
+                recent_exams.append({
+                    'exam_name': result.id_exam_application.id_exam.exam_name,
+                    'total_score': float(result.total_score) if result.total_score else 0,
+                    'max_score': float(result.max_score) if result.max_score else 0,
+                    'percentage': round((float(result.total_score or 0) / float(result.max_score or 1)) * 100, 2),
+                    'correct_answers': result.correct_answers,
+                    'wrong_answers': result.wrong_answers,
+                    'application_date': result.id_exam_application.application_date,
+                })
+            
+            profile_data['descriptors'] = {
+                'achieved': descriptors_achieved,
+                'total_count': total_descriptors,
+                'achieved_count': achieved_count,
+                'percentage': round((achieved_count / total_descriptors * 100), 2) if total_descriptors > 0 else 0,
+                'by_subject': descriptors_by_subject,
+            }
+            
+            profile_data['recent_progress'] = recent_progress
+            profile_data['recent_exams'] = recent_exams
+            
+            return Response(profile_data)
+            
+        except TbStudents.DoesNotExist:
+            return Response({'error': 'Aluno não encontrado'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)

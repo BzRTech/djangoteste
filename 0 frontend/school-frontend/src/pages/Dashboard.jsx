@@ -3,6 +3,7 @@ import Pagination from '../components/Pagination';
 import StatsCards from '../components/dashboard/StatsCards';
 import ChartsGrid from '../components/dashboard/ChartsGrid';
 import Loading from '../components/Loading';
+import StudentProfile from './StudentProfile';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -90,7 +91,7 @@ const Dashboard = () => {
 
       // Processa dados de estudantes PAGINADOS (para tabela)
       const pagedStudentsData = await pagedStudentsRes.json();
-      
+
       if (pagedStudentsData.results) {
         setPagedStudents(pagedStudentsData.results);
         setStudentCount(pagedStudentsData.count || 0);
@@ -118,7 +119,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <Loading/>
+      <Loading />
     );
   }
 
@@ -136,7 +137,7 @@ const Dashboard = () => {
           <p className="text-sm text-gray-500 mb-4 text-center">
             Verifique se o servidor Django está rodando em http://127.0.0.1:8000
           </p>
-          <button 
+          <button
             onClick={fetchData}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -157,7 +158,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Cards - Com TODOS os dados */}
-        <StatsCards 
+        <StatsCards
           students={allStudents}
           classes={allClasses}
           teachers={allTeachers}
@@ -165,7 +166,7 @@ const Dashboard = () => {
         />
 
         {/* Charts - Com TODOS os dados */}
-        <ChartsGrid 
+        <ChartsGrid
           students={allStudents}
           classes={allClasses}
         />
@@ -218,36 +219,42 @@ const Dashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {student.student_serial}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {student.student_name}
+                      {/* ✅ NOME AGORA É CLICÁVEL */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a
+                          href={`/student/${student.id_student}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {student.student_name}
+                        </a>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {student.class_name || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          student.status === 'enrolled' || student.status === 'Ativo'
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${student.status === 'enrolled' || student.status === 'Ativo'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
-                        }`}>
+                          }`}>
                           {student.status || 'N/A'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {student.enrollment_date 
-                          ? new Date(student.enrollment_date).toLocaleDateString('pt-BR') 
+                        {student.enrollment_date
+                          ? new Date(student.enrollment_date).toLocaleDateString('pt-BR')
                           : 'N/A'}
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
+              
             </table>
           </div>
 
           {/* Paginação */}
           <div className="p-6 bg-gray-50 border-t border-gray-200">
-            <Pagination 
+            <Pagination
               currentPage={studentPage}
               totalPages={studentTotalPages}
               onPageChange={setStudentPage}
