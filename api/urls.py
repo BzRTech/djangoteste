@@ -49,6 +49,8 @@ router.register(r'exam-results', TbExamResultsViewSet, basename='exam-result')
 # ============================================
 router.register(r'student-achievements', TbStudentDescriptorAchievementsViewSet, basename='student-achievement')
 router.register(r'learning-progress', TbStudentLearningProgressViewSet, basename='learning-progress')
+router.register(r'student-profile', StudentProfileViewSet, basename='student-profile')
+
 
 urlpatterns = [
     path('', include(router.urls)),

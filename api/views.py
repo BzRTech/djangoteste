@@ -501,12 +501,13 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     """Perfil completo do aluno com descritores conquistados"""
     queryset = TbStudents.objects.all()
     serializer_class = TbStudentsSerializer
-    lookup_field = 'id_student'
+    lookup_field = 'id_student'  # ✅ Importante: usar id_student como lookup
     
     @action(detail=True, methods=['get'])
     def profile(self, request, id_student=None):
         """Retorna perfil completo do aluno"""
         try:
+            # ✅ Usar self.get_object() para buscar corretamente
             student = self.get_object()
             
             # Dados básicos do aluno
@@ -539,7 +540,7 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                     'exam_name': achievement.id_exam_application.id_exam.exam_name if achievement.id_exam_application else None,
                 })
             
-            # Todos os descritores do catálogo (para comparação)
+            # Todos os descritores do catálogo
             all_descriptors = TbDescriptorsCatalog.objects.all()
             total_descriptors = all_descriptors.count()
             achieved_count = len(descriptors_achieved)
@@ -612,6 +613,6 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(profile_data)
             
         except TbStudents.DoesNotExist:
-            return Response({'error': 'Aluno não encontrado'}, status=404)
+            return Response({'error': 'Aluno não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'error': str(e)}, status=500)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

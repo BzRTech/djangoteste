@@ -3,7 +3,7 @@ import Pagination from '../components/Pagination';
 import StatsCards from '../components/dashboard/StatsCards';
 import ChartsGrid from '../components/dashboard/ChartsGrid';
 import Loading from '../components/Loading';
-import StudentProfile from './StudentProfile';
+
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
