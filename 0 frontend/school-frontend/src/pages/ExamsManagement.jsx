@@ -12,15 +12,13 @@ import {
   Loader2,
   AlertCircle,
   BookOpen,
-  //Eye,
-  //AlertCircle,
 } from "lucide-react";
 
 import Loading from "../components/Loading";
 import ResultsTab from "../components/examManagement/ResultsTab";
 import QuestionBankManager from "../components/examManagement/QuestionBankManager";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
 
 const ExamsManagement = () => {
   const [activeTab, setActiveTab] = useState("exams");
@@ -33,7 +31,6 @@ const ExamsManagement = () => {
   const [error, setError] = useState(null);
   const [showExamForm, setShowExamForm] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
-  // const [selectedExam, setSelectedExam] = useState(null);
   const [examResults, setExamResults] = useState([]);
   const [students, setStudents] = useState([]);
   const [selectedExamForQuestions, setSelectedExamForQuestions] =
@@ -112,19 +109,6 @@ const ExamsManagement = () => {
       setLoading(false);
     }
   };
-
-  // No render, passe os novos props para ResultsTab
-  {
-    activeTab === "results" && (
-      <ResultsTab
-        applications={applications}
-        examResults={examResults} // 👈 NOVO
-        students={students} // 👈 NOVO
-        exams={exams} // 👈 NOVO
-        classes={classes} // 👈 NOVO
-      />
-    );
-  }
 
   const handleDelete = async (id, type) => {
     if (!window.confirm("Tem certeza que deseja deletar?")) return;
@@ -249,8 +233,7 @@ const ExamsManagement = () => {
                 subjects={subjects}
                 onRefresh={fetchData}
                 onDelete={handleDelete}
-                onEdit={(exam) => {
-                  //setSelectedExam(exam);
+                onEdit={() => {
                   setShowExamForm(true);
                 }}
                 onManageQuestions={(exam) => setSelectedExamForQuestions(exam)}
@@ -277,7 +260,13 @@ const ExamsManagement = () => {
               />
             )}
             {activeTab === "results" && (
-              <ResultsTab applications={applications} />
+              <ResultsTab
+                applications={applications}
+                examResults={examResults}
+                students={students}
+                exams={exams}
+                classes={classes}
+              />
             )}
           </div>
         </div>
@@ -1050,5 +1039,4 @@ const ApplicationForm = ({
   );
 };
 
-<ResultsTab />;
 export default ExamsManagement;

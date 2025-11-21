@@ -4,7 +4,7 @@ import {
   Filter, BookOpen, Target, AlertCircle, Save, X
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
 const QuestionBankManager = ({ examId, onClose }) => {
   const [questions, setQuestions] = useState([]);
@@ -28,6 +28,10 @@ const QuestionBankManager = ({ examId, onClose }) => {
         fetch(`${API_BASE_URL}/descriptors/`)
       ]);
 
+      if (!questionsRes.ok || !descriptorsRes.ok) {
+        throw new Error('Erro ao buscar dados da API');
+      }
+
       const questionsData = await questionsRes.json();
       const descriptorsData = await descriptorsRes.json();
 
@@ -35,6 +39,7 @@ const QuestionBankManager = ({ examId, onClose }) => {
       setDescriptors(Array.isArray(descriptorsData) ? descriptorsData : descriptorsData.results || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      alert('Erro ao carregar questões e descritores. Verifique a conexão.');
     } finally {
       setLoading(false);
     }
@@ -66,7 +71,9 @@ const QuestionBankManager = ({ examId, onClose }) => {
     return matchesSearch && matchesSubject && matchesDifficulty;
   });
 
-  const subjects = [...new Set(descriptors.map(d => d.subject).filter(Boolean))];
+  const subjects = Array.isArray(descriptors) && descriptors.length > 0
+    ? [...new Set(descriptors.map(d => d.subject).filter(Boolean))]
+    : [];
 
   if (loading) {
     return (
@@ -335,6 +342,11 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
       return;
     }
 
+    if (!formData.question_text.trim()) {
+      setError('O enunciado da questão é obrigatório');
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -362,7 +374,19 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(JSON.stringify(errorData));
+        console.error('Erro da API:', errorData);
+
+        // Mensagens de erro mais amigáveis
+        if (response.status === 400) {
+          const errorMessages = Object.entries(errorData)
+            .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+            .join('\n');
+          throw new Error(errorMessages || 'Dados inválidos');
+        } else if (response.status === 404) {
+          throw new Error('Prova não encontrada');
+        } else {
+          throw new Error(`Erro ${response.status}: ${JSON.stringify(errorData)}`);
+        }
       }
 
       onSave();
@@ -482,7 +506,7 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Selecione um descritor</option>
-            {descriptors.map(desc => (
+            {Array.isArray(descriptors) && descriptors.map(desc => (
               <option key={desc.id} value={desc.id}>
                 {desc.descriptor_code} - {desc.descriptor_name}
               </option>

@@ -33,7 +33,7 @@ import {
   Legend,
 } from "recharts";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
 
 const StudentProfile = () => {
   // Pega ID do aluno da URL (simulado aqui, no React Router seria useParams)
@@ -45,7 +45,29 @@ const StudentProfile = () => {
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    fetchProfile();
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `${API_BASE_URL}/student-profile/${studentId}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Erro ao carregar perfil: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setProfile(data);
+        setError(null);
+      } catch (err) {
+        console.error("Erro:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
   }, [studentId]);
 
   const fetchProfile = async () => {
@@ -129,19 +151,19 @@ const StudentProfile = () => {
   }
 
   // Preparação dos dados para gráficos
-  const competencyRadarData = profile.recent_progress
+  const competencyRadarData = Array.isArray(profile.recent_progress) && profile.recent_progress.length > 0
     ? profile.recent_progress.slice(0, 6).map((p) => ({
         competency: p.descriptor_name?.substring(0, 15) + "..." || "N/A",
         mastery: p.descriptor_mastery || 0,
       }))
     : [];
 
-  const descriptorsBySubjectData = profile.descriptors?.by_subject
+  const descriptorsBySubjectData = profile.descriptors?.by_subject && typeof profile.descriptors.by_subject === 'object'
     ? Object.entries(profile.descriptors.by_subject).map(([subject, data]) => ({
         subject,
-        conquistados: data.achieved,
-        total: data.total,
-        percentual: Math.round((data.achieved / data.total) * 100),
+        conquistados: data.achieved || 0,
+        total: data.total || 0,
+        percentual: data.total > 0 ? Math.round((data.achieved / data.total) * 100) : 0,
       }))
     : [];
 
@@ -422,7 +444,7 @@ const OverviewTab = ({
 const DescriptorsTab = ({ profile }) => {
   const [selectedSubject, setSelectedSubject] = useState("Todos");
 
-  if (!profile.descriptors?.by_subject) {
+  if (!profile.descriptors?.by_subject || typeof profile.descriptors.by_subject !== 'object') {
     return (
       <p className="text-gray-500 text-center py-8">
         Nenhum descritor disponível
@@ -511,15 +533,16 @@ const DescriptorsTab = ({ profile }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.descriptors?.map((desc) => (
-              <div
-                key={desc.id}
-                className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${
-                  desc.achieved
-                    ? "bg-green-50 border-green-500 shadow-md"
-                    : "bg-red-50 border-red-300 opacity-70"
-                }`}
-              >
+            {Array.isArray(data.descriptors) && data.descriptors.length > 0 ? (
+              data.descriptors.map((desc) => (
+                <div
+                  key={desc.id}
+                  className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${
+                    desc.achieved
+                      ? "bg-green-50 border-green-500 shadow-md"
+                      : "bg-red-50 border-red-300 opacity-70"
+                  }`}
+                >
                 <div className="flex items-start justify-between mb-2">
                   <span className="text-xs font-mono font-bold text-gray-600 bg-white px-2 py-1 rounded">
                     {desc.code}
@@ -545,7 +568,12 @@ const DescriptorsTab = ({ profile }) => {
                   </span>
                 </div>
               </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-4 col-span-full">
+                Nenhum descritor cadastrado para esta disciplina
+              </p>
+            )}
           </div>
         </div>
       ))}
@@ -554,7 +582,7 @@ const DescriptorsTab = ({ profile }) => {
 };
 
 const ExamsTab = ({ profile }) => {
-  if (!profile.recent_exams || profile.recent_exams.length === 0) {
+  if (!Array.isArray(profile.recent_exams) || profile.recent_exams.length === 0) {
     return (
       <div className="text-center py-12">
         <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -663,7 +691,7 @@ const ExamsTab = ({ profile }) => {
 };
 
 const ProgressTab = ({ profile }) => {
-  if (!profile.recent_progress || profile.recent_progress.length === 0) {
+  if (!Array.isArray(profile.recent_progress) || profile.recent_progress.length === 0) {
     return (
       <div className="text-center py-12">
         <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
