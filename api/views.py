@@ -111,7 +111,11 @@ class TbClassViewSet(viewsets.ModelViewSet):
 
 class TbStudentsViewSet(viewsets.ModelViewSet):
     """Alunos"""
-    queryset = TbStudents.objects.all().select_related('id_class')
+    queryset = TbStudents.objects.all().select_related(
+        'id_class',
+        'id_class__id_school',
+        'id_class__id_teacher'
+    )
     serializer_class = TbStudentsSerializer
     lookup_field = 'id_student'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -252,11 +256,15 @@ class TbQuestionCompetencyViewSet(viewsets.ModelViewSet):
 class TbExamApplicationsViewSet(viewsets.ModelViewSet):
     """Aplicações de Exames"""
     queryset = TbExamApplications.objects.all().select_related(
-        'id_exam', 'id_class', 'id_teacher'
+        'id_exam',
+        'id_class',
+        'id_class__id_school',
+        'id_teacher'
     )
+    serializer_class = TbExamApplicationsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = [
-        'id_exam', 'id_class', 'id_teacher', 'status', 
+        'id_exam', 'id_class', 'id_teacher', 'status',
         'application_type', 'fiscal_year'
     ]
     ordering_fields = ['application_date', 'created_at']
@@ -355,18 +363,26 @@ class TbStudentAnswersViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             for answer in answers:
                 # Verificar se a resposta está correta
-                question = TbQuestions.objects.get(id=answer['id_question'])
-                is_correct = answer.get('id_selected_alternative') == question.correct_answer
-                
-                student_answer = TbStudentAnswers.objects.create(
-                    id_student_id=id_student,
-                    id_exam_application_id=id_exam_application,
-                    id_question_id=answer['id_question'],
-                    id_selected_alternative_id=answer.get('id_selected_alternative'),
-                    answer_text=answer.get('answer_text', ''),
-                    is_correct=is_correct
-                )
-                created_answers.append(student_answer)
+                try:
+                    question = TbQuestions.objects.get(id=answer['id_question'])
+                    selected_alt_id = answer.get('id_selected_alternative')
+
+                    # Verificar se a resposta está correta comparando IDs
+                    is_correct = False
+                    if selected_alt_id and question.correct_answer:
+                        is_correct = int(selected_alt_id) == int(question.correct_answer)
+
+                    student_answer = TbStudentAnswers.objects.create(
+                        id_student_id=id_student,
+                        id_exam_application_id=id_exam_application,
+                        id_question_id=answer['id_question'],
+                        id_selected_alternative_id=selected_alt_id,
+                        answer_text=answer.get('answer_text', ''),
+                        is_correct=is_correct
+                    )
+                    created_answers.append(student_answer)
+                except TbQuestions.DoesNotExist:
+                    continue
             
             # Calcular e criar resultado automático
             self._calculate_exam_result(id_student, id_exam_application)
@@ -410,7 +426,10 @@ class TbStudentAnswersViewSet(viewsets.ModelViewSet):
 class TbExamResultsViewSet(viewsets.ModelViewSet):
     """Resultados dos Exames"""
     queryset = TbExamResults.objects.all().select_related(
-        'id_student', 'id_exam_application'
+        'id_student',
+        'id_student__id_class',
+        'id_exam_application',
+        'id_exam_application__id_exam'
     )
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['id_student', 'id_exam_application']
@@ -499,7 +518,11 @@ class TbStudentLearningProgressViewSet(viewsets.ModelViewSet):
     
 class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     """Perfil completo do aluno com descritores conquistados"""
-    queryset = TbStudents.objects.all()
+    queryset = TbStudents.objects.all().select_related(
+        'id_class',
+        'id_class__id_school',
+        'id_class__id_teacher'
+    )
     serializer_class = TbStudentsSerializer
     lookup_field = 'id_student'  # ✅ Importante: usar id_student como lookup
     
@@ -509,8 +532,8 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             # ✅ Usar self.get_object() para buscar corretamente
             student = self.get_object()
-            
-            # Dados básicos do aluno
+
+            # Dados básicos do aluno com tratamento de None
             profile_data = {
                 'id_student': student.id_student,
                 'student_serial': student.student_serial,
@@ -518,7 +541,8 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                 'status': student.status,
                 'enrollment_date': student.enrollment_date,
                 'class_name': student.id_class.class_name if student.id_class else None,
-                'school_name': student.id_class.id_school.school if student.id_class else None,
+                'school_name': (student.id_class.id_school.school
+                               if student.id_class and student.id_class.id_school else None),
                 'grade': student.id_class.grade if student.id_class else None,
             }
             
@@ -529,6 +553,10 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
             
             descriptors_achieved = []
             for achievement in achievements:
+                exam_name = None
+                if achievement.id_exam_application and achievement.id_exam_application.id_exam:
+                    exam_name = achievement.id_exam_application.id_exam.exam_name
+
                 descriptors_achieved.append({
                     'id': achievement.id_descriptor.id,
                     'descriptor_code': achievement.id_descriptor.descriptor_code,
@@ -537,7 +565,7 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                     'learning_field': achievement.id_descriptor.learning_field,
                     'icon': achievement.id_descriptor.icon,
                     'achieved_at': achievement.achieved_at,
-                    'exam_name': achievement.id_exam_application.id_exam.exam_name if achievement.id_exam_application else None,
+                    'exam_name': exam_name,
                 })
             
             # Todos os descritores do catálogo
