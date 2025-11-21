@@ -37,15 +37,40 @@ class TbCompetencyIdebSerializer(serializers.ModelSerializer):
 # ============================================
 
 class TbSchoolSerializer(serializers.ModelSerializer):
-    city_name = serializers.CharField(source='id_city.city', read_only=True)
-    state = serializers.CharField(source='id_city.state', read_only=True)
-    
+    city_name = serializers.CharField(source='id_city.city', read_only=True, allow_null=True)
+    state = serializers.CharField(source='id_city.state', read_only=True, allow_null=True)
+
     class Meta:
         model = TbSchool
+<<<<<<< HEAD
         fields = [
             'id', 'school', 'director_name', 'id_city', 
             'city_name', 'state', 'address', 'created_at'
         ]
+=======
+        fields = ['id', 'school', 'director_name', 'id_city', 'city_name', 'state', 'address', 'created_at']
+        extra_kwargs = {
+            'id_city': {'required': False, 'allow_null': True},
+            'director_name': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'address': {'required': False, 'allow_blank': True, 'allow_null': True},
+        }
+
+
+class TbSubjectSerializer(serializers.ModelSerializer):
+    """Serializer para disciplinas"""
+    class Meta:
+        model = TbSubject
+        fields = '__all__'
+
+
+class TbTeacherSubjectSerializer(serializers.ModelSerializer):
+    """Serializer para a tabela intermediária"""
+    subject_name = serializers.CharField(source='id_subject.subject_name', read_only=True)
+    
+    class Meta:
+        model = TbTeacherSubject
+        fields = ['id', 'id_teacher', 'id_subject', 'subject_name', 'created_at']
+>>>>>>> 34eb5207ca00212ce84f9cde7c917684ebcd85f0
 
 
 class TbTeacherSerializer(serializers.ModelSerializer):
@@ -115,28 +140,37 @@ class TbTeacherSchoolSerializer(serializers.ModelSerializer):
 
 
 class TbClassSerializer(serializers.ModelSerializer):
-    teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
-    school_name = serializers.CharField(source='id_school.school', read_only=True)
-    
+    teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True, allow_null=True)
+    school_name = serializers.CharField(source='id_school.school', read_only=True, allow_null=True)
+
     class Meta:
         model = TbClass
         fields = [
-            'id', 'class_name', 'id_teacher', 'teacher_name', 
-            'id_school', 'school_name', 'school_year', 'grade', 
+            'id', 'class_name', 'id_teacher', 'teacher_name',
+            'id_school', 'school_name', 'school_year', 'grade',
             'shift', 'created_at'
         ]
+        extra_kwargs = {
+            'id_teacher': {'required': False, 'allow_null': True},
+            'id_school': {'required': False, 'allow_null': True},
+            'shift': {'required': False, 'allow_blank': True, 'allow_null': True},
+        }
 
 
 class TbStudentsSerializer(serializers.ModelSerializer):
-    class_name = serializers.CharField(source='id_class.class_name', read_only=True)
-    
+    class_name = serializers.CharField(source='id_class.class_name', read_only=True, allow_null=True)
+
     class Meta:
         model = TbStudents
         fields = [
-            'id_student', 'student_serial', 'student_name', 
-            'id_class', 'class_name', 'enrollment_date', 
+            'id_student', 'student_serial', 'student_name',
+            'id_class', 'class_name', 'enrollment_date',
             'status', 'created_at'
         ]
+        extra_kwargs = {
+            'id_class': {'required': False, 'allow_null': True},
+            'enrollment_date': {'required': False, 'allow_null': True},
+        }
 
 
 # ============================================
@@ -171,6 +205,35 @@ class TbClassIdebIndicatorsSerializer(serializers.ModelSerializer):
 # 4. DEFINIÇÃO DE PROVAS E QUESTÕES
 # ============================================
 
+<<<<<<< HEAD
+=======
+class TbCompetencyIdebSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TbCompetencyIdeb
+        fields = '__all__'
+
+
+class TbDescriptorsCatalogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TbDescriptorsCatalog
+        fields = '__all__'
+
+
+# ============================================
+# SERIALIZERS DE EXAMES E QUESTÕES
+# ============================================
+
+class TbExamsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TbExams
+        fields = '__all__'
+        extra_kwargs = {
+            'description': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'total_questions': {'required': False, 'allow_null': True},
+        }
+
+
+>>>>>>> 34eb5207ca00212ce84f9cde7c917684ebcd85f0
 class TbAlternativesSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbAlternatives
@@ -179,9 +242,9 @@ class TbAlternativesSerializer(serializers.ModelSerializer):
 
 class TbQuestionsSerializer(serializers.ModelSerializer):
     exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
-    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)
+    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True, allow_null=True)
     alternatives = TbAlternativesSerializer(many=True, read_only=True, source='tbalternatives_set')
-    
+
     class Meta:
         model = TbQuestions
         fields = [
@@ -190,6 +253,13 @@ class TbQuestionsSerializer(serializers.ModelSerializer):
             'skill_assessed', 'difficulty_level', 'points',
             'id_descriptor', 'descriptor_name', 'alternatives', 'created_at'
         ]
+        extra_kwargs = {
+            'id_descriptor': {'required': False, 'allow_null': True},
+            'correct_answer': {'required': False, 'allow_null': True},
+            'skill_assessed': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'difficulty_level': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'points': {'required': False, 'allow_null': True},
+        }
 
 
 class TbQuestionsCreateSerializer(serializers.ModelSerializer):
@@ -321,7 +391,7 @@ class TbStudentAnswersSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
     question_text = serializers.CharField(source='id_question.question_text', read_only=True)
     alternative_text = serializers.CharField(source='id_selected_alternative.alternative_text', read_only=True)
-    
+
     class Meta:
         model = TbStudentAnswers
         fields = [
@@ -330,6 +400,12 @@ class TbStudentAnswersSerializer(serializers.ModelSerializer):
             'alternative_text', 'answer_text', 'is_correct',
             'response_time_seconds', 'answered_at'
         ]
+        extra_kwargs = {
+            'id_selected_alternative': {'required': False, 'allow_null': True},
+            'answer_text': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'response_time_seconds': {'required': False, 'allow_null': True},
+            'answered_at': {'required': False, 'allow_null': True},
+        }
 
 
 class BulkStudentAnswersSerializer(serializers.Serializer):
@@ -350,7 +426,7 @@ class TbExamResultsSerializer(serializers.ModelSerializer):
     """Serializer básico para resultados"""
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
     exam_name = serializers.CharField(source='id_exam_application.id_exam.exam_name', read_only=True)
-    
+
     class Meta:
         model = TbExamResults
         fields = [
@@ -359,6 +435,16 @@ class TbExamResultsSerializer(serializers.ModelSerializer):
             'wrong_answers', 'blank_answers', 'completion_time_minutes',
             'created_at'
         ]
+        extra_kwargs = {
+            'total_score': {'required': False, 'allow_null': True},
+            'max_score': {'required': False, 'allow_null': True},
+            'correct_answers': {'required': False, 'allow_null': True},
+            'wrong_answers': {'required': False, 'allow_null': True},
+            'blank_answers': {'required': False, 'allow_null': True},
+            'completion_time_minutes': {'required': False, 'allow_null': True},
+            'started_at': {'required': False, 'allow_null': True},
+            'finished_at': {'required': False, 'allow_null': True},
+        }
 
 
 class TbExamResultsDetailSerializer(serializers.ModelSerializer):
