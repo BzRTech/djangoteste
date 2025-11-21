@@ -179,25 +179,24 @@ class TbStudentsSerializer(serializers.ModelSerializer):
 
 class TbSchoolIdebIndicatorsSerializer(serializers.ModelSerializer):
     school_name = serializers.CharField(source='id_school.school', read_only=True)
-    
+
     class Meta:
         model = TbSchoolIdebIndicators
         fields = [
             'id', 'id_school', 'school_name', 'fiscal_year',
             'ideb_target', 'regional_average', 'state_average',
-            'critical_threshold', 'actual_avg_score', 'created_at'
+            'critical_threshold', 'created_at'
         ]
 
 
 class TbClassIdebIndicatorsSerializer(serializers.ModelSerializer):
     class_name = serializers.CharField(source='id_class.class_name', read_only=True)
-    
+
     class Meta:
         model = TbClassIdebIndicators
         fields = [
             'id', 'id_class', 'class_name', 'fiscal_year',
-            'class_ideb_target', 'expected_avg_score', 
-            'actual_avg_score', 'created_at'
+            'class_ideb_target', 'expected_avg_score', 'created_at'
         ]
 
 
