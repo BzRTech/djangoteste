@@ -194,9 +194,20 @@ class TbExamsSerializer(serializers.ModelSerializer):
 
 # ✅ SERIALIZER CORRIGIDO PARA ALTERNATIVES
 class TbAlternativesSerializer(serializers.ModelSerializer):
+    alternative_letter = serializers.SerializerMethodField()
+
     class Meta:
         model = TbAlternatives
         fields = '__all__'
+
+    def get_alternative_letter(self, obj):
+        """Converte alternative_order (1,2,3...) em letra (A,B,C...)"""
+        if obj.alternative_order is None:
+            return None
+        letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        if 1 <= obj.alternative_order <= 26:
+            return letters[obj.alternative_order - 1]
+        return str(obj.alternative_order)
 
 
 class TbQuestionsSerializer(serializers.ModelSerializer):
@@ -236,11 +247,28 @@ class TbQuestionsCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         alternatives_data = validated_data.pop('alternatives', [])
         question = TbQuestions.objects.create(**validated_data)
-        
+
         for alt_data in alternatives_data:
             TbAlternatives.objects.create(id_question=question, **alt_data)
-        
+
         return question
+
+    def update(self, instance, validated_data):
+        alternatives_data = validated_data.pop('alternatives', [])
+
+        # Atualizar campos da questão
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Remover alternativas antigas
+        instance.tbalternatives_set.all().delete()
+
+        # Criar novas alternativas
+        for alt_data in alternatives_data:
+            TbAlternatives.objects.create(id_question=instance, **alt_data)
+
+        return instance
 
 
 class TbQuestionCompetencySerializer(serializers.ModelSerializer):
