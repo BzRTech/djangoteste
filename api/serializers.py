@@ -249,7 +249,7 @@ class TbQuestionsSerializer(serializers.ModelSerializer):
 
 class TbQuestionsCreateSerializer(serializers.ModelSerializer):
     """Serializer otimizado para criação de questão com alternativas aninhadas"""
-    aalternatives = TbAlternativesCreateSerializer(many=True, required=False)
+    alternatives = TbAlternativesCreateSerializer(many=True, required=False)
     
     class Meta:
         model = TbQuestions
@@ -319,16 +319,18 @@ class TbExamsDetailSerializer(serializers.ModelSerializer):
 
 class TbExamApplicationsSerializer(serializers.ModelSerializer):
     exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
+    exam_title = serializers.CharField(source='id_exam.exam_name', read_only=True)  # Alias para frontend
     class_name = serializers.CharField(source='id_class.class_name', read_only=True)
     teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
-    
+    students_count = serializers.SerializerMethodField()
+
     class Meta:
         model = TbExamApplications
         fields = [
-            'id', 'id_exam', 'exam_name', 'id_class', 'class_name',
+            'id', 'id_exam', 'exam_name', 'exam_title', 'id_class', 'class_name',
             'id_teacher', 'teacher_name', 'application_date',
             'start_time', 'end_time', 'status', 'observations',
-            'application_type', 'assessment_period', 'fiscal_year', 'created_at'
+            'application_type', 'assessment_period', 'fiscal_year', 'students_count', 'created_at'
         ]
         extra_kwargs = {
             'start_time': {'required': False, 'allow_null': True},
@@ -338,6 +340,10 @@ class TbExamApplicationsSerializer(serializers.ModelSerializer):
             'assessment_period': {'required': False, 'allow_null': True},
             'fiscal_year': {'required': False, 'allow_null': True},
         }
+
+    def get_students_count(self, obj):
+        """Retorna o número de alunos que responderam esta prova"""
+        return TbStudentAnswers.objects.filter(id_exam_application=obj).values('id_student').distinct().count()
 
 
 class TbExamApplicationsDetailSerializer(serializers.ModelSerializer):

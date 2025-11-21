@@ -11,6 +11,7 @@ import DescriptorCatalog from "./pages/DescriptorCatalog";
 import AdminCRUD from "./pages/AdminCRUD";
 import ExamsManagement from "./pages/ExamsManagement";
 import StudentProfile from "./pages/StudentProfile";
+import StudentAnswers from "./pages/StudentAnswers";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="admin" element={<AdminCRUD />} />
           <Route path="exams" element={<ExamsManagement />} />
           <Route path="student/:id" element={<StudentProfile />} />
+          <Route path="student-answers" element={<StudentAnswers />} />
         </Route>
       </Routes>
     </Router>
