@@ -1,9 +1,8 @@
 from rest_framework import serializers
 from students.models import *
 
-
 # ============================================
-# SERIALIZERS DE LOCALIZAÇÃO E ESTRUTURA
+# 1. CADASTROS BÁSICOS E GEOLOCALIZAÇÃO
 # ============================================
 
 class TbCitySerializer(serializers.ModelSerializer):
@@ -11,33 +10,46 @@ class TbCitySerializer(serializers.ModelSerializer):
         model = TbCity
         fields = '__all__'
 
+
+class TbSubjectSerializer(serializers.ModelSerializer):
+    """Serializer para disciplinas (Base do currículo)"""
+    class Meta:
+        model = TbSubject
+        fields = '__all__'
+
+
+class TbDescriptorsCatalogSerializer(serializers.ModelSerializer):
+    """Catálogo de Descritores"""
+    class Meta:
+        model = TbDescriptorsCatalog
+        fields = '__all__'
+
+
+class TbCompetencyIdebSerializer(serializers.ModelSerializer):
+    """Catálogo de Competências"""
+    class Meta:
+        model = TbCompetencyIdeb
+        fields = '__all__'
+
+
+# ============================================
+# 2. ESTRUTURA ESCOLAR E PESSOAS
+# ============================================
+
 class TbSchoolSerializer(serializers.ModelSerializer):
     city_name = serializers.CharField(source='id_city.city', read_only=True)
     state = serializers.CharField(source='id_city.state', read_only=True)
     
     class Meta:
         model = TbSchool
-        fields = ['id', 'school', 'director_name', 'id_city', 'city_name', 'state', 'address', 'created_at']
-
-
-class TbSubjectSerializer(serializers.ModelSerializer):
-    """Serializer para disciplinas"""
-    class Meta:
-        model = TbSubject
-        fields = '__all__'
-
-
-class TbTeacherSubjectSerializer(serializers.ModelSerializer):
-    """Serializer para a tabela intermediária"""
-    subject_name = serializers.CharField(source='id_subject.subject_name', read_only=True)
-    
-    class Meta:
-        model = TbTeacherSubject
-        fields = ['id', 'id_teacher', 'id_subject', 'subject_name', 'created_at']
+        fields = [
+            'id', 'school', 'director_name', 'id_city', 
+            'city_name', 'state', 'address', 'created_at'
+        ]
 
 
 class TbTeacherSerializer(serializers.ModelSerializer):
-    """Serializer com suporte a subjects many-to-many"""
+    """Serializer Principal de Professor com suporte a Many-to-Many manual"""
     subjects = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=TbSubject.objects.all(),
@@ -48,52 +60,49 @@ class TbTeacherSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = TbTeacher
-        fields = ['id', 'teacher_serial', 'teacher_name', 'status', 'created_at', 'subjects', 'subject_details']
+        fields = [
+            'id', 'teacher_serial', 'teacher_name', 'status', 
+            'created_at', 'subjects', 'subject_details'
+        ]
     
     def get_subject_details(self, obj):
-        """Retorna lista de nomes das disciplinas"""
+        """Retorna lista de nomes das disciplinas via tabela intermediária"""
         teacher_subjects = TbTeacherSubject.objects.filter(id_teacher=obj).select_related('id_subject')
         return [ts.id_subject.subject_name for ts in teacher_subjects]
     
     def create(self, validated_data):
-        """Cria professor e associa disciplinas"""
         subjects = validated_data.pop('subjects', [])
         teacher = TbTeacher.objects.create(**validated_data)
-        
-        # Cria os relacionamentos
         for subject in subjects:
-            TbTeacherSubject.objects.create(
-                id_teacher=teacher,
-                id_subject=subject
-            )
-        
+            TbTeacherSubject.objects.create(id_teacher=teacher, id_subject=subject)
         return teacher
     
     def update(self, instance, validated_data):
-        """Atualiza professor e suas disciplinas"""
         subjects = validated_data.pop('subjects', None)
         
-        # Atualiza campos básicos
         instance.teacher_name = validated_data.get('teacher_name', instance.teacher_name)
         instance.teacher_serial = validated_data.get('teacher_serial', instance.teacher_serial)
         instance.status = validated_data.get('status', instance.status)
         instance.save()
         
-        # Atualiza disciplinas se fornecidas
         if subjects is not None:
-            # Remove relacionamentos antigos
             TbTeacherSubject.objects.filter(id_teacher=instance).delete()
-            
-            # Cria novos relacionamentos
             for subject in subjects:
-                TbTeacherSubject.objects.create(
-                    id_teacher=instance,
-                    id_subject=subject
-                )
-        
+                TbTeacherSubject.objects.create(id_teacher=instance, id_subject=subject)
         return instance
+
+
+class TbTeacherSubjectSerializer(serializers.ModelSerializer):
+    """Tabela intermediária Professor <-> Disciplina"""
+    subject_name = serializers.CharField(source='id_subject.subject_name', read_only=True)
     
+    class Meta:
+        model = TbTeacherSubject
+        fields = ['id', 'id_teacher', 'id_subject', 'subject_name', 'created_at']
+
+
 class TbTeacherSchoolSerializer(serializers.ModelSerializer):
+    """Tabela intermediária Professor <-> Escola"""
     teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
     school_name = serializers.CharField(source='id_school.school', read_only=True)
     
@@ -131,7 +140,7 @@ class TbStudentsSerializer(serializers.ModelSerializer):
 
 
 # ============================================
-# SERIALIZERS DE INDICADORES IDEB
+# 3. INDICADORES E METAS (IDEB)
 # ============================================
 
 class TbSchoolIdebIndicatorsSerializer(serializers.ModelSerializer):
@@ -142,7 +151,7 @@ class TbSchoolIdebIndicatorsSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'id_school', 'school_name', 'fiscal_year',
             'ideb_target', 'regional_average', 'state_average',
-            'critical_threshold', 'created_at'
+            'critical_threshold', 'actual_avg_score', 'created_at'
         ]
 
 
@@ -153,35 +162,14 @@ class TbClassIdebIndicatorsSerializer(serializers.ModelSerializer):
         model = TbClassIdebIndicators
         fields = [
             'id', 'id_class', 'class_name', 'fiscal_year',
-            'class_ideb_target', 'expected_avg_score', 'created_at'
+            'class_ideb_target', 'expected_avg_score', 
+            'actual_avg_score', 'created_at'
         ]
 
 
 # ============================================
-# SERIALIZERS DE COMPETÊNCIAS E DESCRITORES
+# 4. DEFINIÇÃO DE PROVAS E QUESTÕES
 # ============================================
-
-class TbCompetencyIdebSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbCompetencyIdeb
-        fields = '__all__'
-
-
-class TbDescriptorsCatalogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbDescriptorsCatalog
-        fields = '__all__'
-
-
-# ============================================
-# SERIALIZERS DE EXAMES E QUESTÕES
-# ============================================
-
-class TbExamsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbExams
-        fields = '__all__'
-
 
 class TbAlternativesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -204,7 +192,30 @@ class TbQuestionsSerializer(serializers.ModelSerializer):
         ]
 
 
+class TbQuestionsCreateSerializer(serializers.ModelSerializer):
+    """Serializer otimizado para criação de questão com alternativas aninhadas"""
+    alternatives = TbAlternativesSerializer(many=True, required=False)
+    
+    class Meta:
+        model = TbQuestions
+        fields = [
+            'id', 'id_exam', 'question_number', 'question_text',
+            'question_type', 'correct_answer', 'skill_assessed',
+            'difficulty_level', 'points', 'id_descriptor', 'alternatives'
+        ]
+    
+    def create(self, validated_data):
+        alternatives_data = validated_data.pop('alternatives', [])
+        question = TbQuestions.objects.create(**validated_data)
+        
+        for alt_data in alternatives_data:
+            TbAlternatives.objects.create(id_question=question, **alt_data)
+        
+        return question
+
+
 class TbQuestionCompetencySerializer(serializers.ModelSerializer):
+    """Relacionamento Questão <-> Competência"""
     question_text = serializers.CharField(source='id_question.question_text', read_only=True)
     competency_name = serializers.CharField(source='id_competency.competency_name', read_only=True)
     
@@ -213,8 +224,31 @@ class TbQuestionCompetencySerializer(serializers.ModelSerializer):
         fields = ['id_question', 'question_text', 'id_competency', 'competency_name']
 
 
+class TbExamsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TbExams
+        fields = '__all__'
+
+
+class TbExamsDetailSerializer(serializers.ModelSerializer):
+    """Serializer detalhado com contagem de questões"""
+    questions_count = serializers.SerializerMethodField()
+    subject_name = serializers.CharField(source='subject', read_only=True)
+    
+    class Meta:
+        model = TbExams
+        fields = [
+            'id', 'exam_code', 'exam_name', 'subject', 'subject_name',
+            'school_year', 'total_questions', 'description', 
+            'questions_count', 'created_at'
+        ]
+    
+    def get_questions_count(self, obj):
+        return TbQuestions.objects.filter(id_exam=obj).count()
+
+
 # ============================================
-# SERIALIZERS DE APLICAÇÕES E RESULTADOS
+# 5. APLICAÇÃO (EXECUÇÃO) DAS PROVAS
 # ============================================
 
 class TbExamApplicationsSerializer(serializers.ModelSerializer):
@@ -230,7 +264,6 @@ class TbExamApplicationsSerializer(serializers.ModelSerializer):
             'start_time', 'end_time', 'status', 'observations',
             'application_type', 'assessment_period', 'fiscal_year', 'created_at'
         ]
-        # Torna os campos de tempo opcionais
         extra_kwargs = {
             'start_time': {'required': False, 'allow_null': True},
             'end_time': {'required': False, 'allow_null': True},
@@ -242,7 +275,7 @@ class TbExamApplicationsSerializer(serializers.ModelSerializer):
 
 
 class TbExamApplicationsDetailSerializer(serializers.ModelSerializer):
-    """Serializer detalhado para aplicações"""
+    """Serializer detalhado para visualização completa da aplicação"""
     exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
     exam_subject = serializers.CharField(source='id_exam.subject', read_only=True)
     class_name = serializers.CharField(source='id_class.class_name', read_only=True)
@@ -261,14 +294,6 @@ class TbExamApplicationsDetailSerializer(serializers.ModelSerializer):
             'application_type', 'assessment_period', 'fiscal_year',
             'students_count', 'results_count', 'created_at'
         ]
-        extra_kwargs = {
-            'start_time': {'required': False, 'allow_null': True},
-            'end_time': {'required': False, 'allow_null': True},
-            'observations': {'required': False, 'allow_null': True, 'allow_blank': True},
-            'application_type': {'required': False, 'allow_null': True},
-            'assessment_period': {'required': False, 'allow_null': True},
-            'fiscal_year': {'required': False, 'allow_null': True},
-        }
     
     def get_students_count(self, obj):
         return TbStudents.objects.filter(id_class=obj.id_class).count()
@@ -288,6 +313,10 @@ class TbAssessmentMetadataSerializer(serializers.ModelSerializer):
         ]
 
 
+# ============================================
+# 6. RESPOSTAS E RESULTADOS DOS ALUNOS
+# ============================================
+
 class TbStudentAnswersSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
     question_text = serializers.CharField(source='id_question.question_text', read_only=True)
@@ -303,6 +332,20 @@ class TbStudentAnswersSerializer(serializers.ModelSerializer):
         ]
 
 
+class BulkStudentAnswersSerializer(serializers.Serializer):
+    """Serializer utilitário para receber respostas em lote"""
+    id_student = serializers.IntegerField()
+    id_exam_application = serializers.IntegerField()
+    answers = serializers.ListField(child=serializers.DictField())
+    
+    def validate(self, data):
+        if not TbStudents.objects.filter(id_student=data['id_student']).exists():
+            raise serializers.ValidationError("Aluno não encontrado")
+        if not TbExamApplications.objects.filter(id=data['id_exam_application']).exists():
+            raise serializers.ValidationError("Aplicação de exame não encontrada")
+        return data
+
+
 class TbExamResultsSerializer(serializers.ModelSerializer):
     """Serializer básico para resultados"""
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
@@ -314,12 +357,12 @@ class TbExamResultsSerializer(serializers.ModelSerializer):
             'id', 'id_student', 'student_name', 'id_exam_application',
             'exam_name', 'total_score', 'max_score', 'correct_answers',
             'wrong_answers', 'blank_answers', 'completion_time_minutes',
-            'started_at', 'finished_at', 'created_at'
+            'created_at'
         ]
 
 
 class TbExamResultsDetailSerializer(serializers.ModelSerializer):
-    """Serializer DETALHADO para resultados com informações completas"""
+    """Serializer enriquecido para relatórios"""
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
     student_serial = serializers.IntegerField(source='id_student.student_serial', read_only=True)
     class_name = serializers.CharField(source='id_student.id_class.class_name', read_only=True)
@@ -342,7 +385,7 @@ class TbExamResultsDetailSerializer(serializers.ModelSerializer):
 
 
 # ============================================
-# SERIALIZERS DE PROGRESSO E CONQUISTAS
+# 7. PROGRESSO E ANALÍTICOS
 # ============================================
 
 class TbStudentDescriptorAchievementsSerializer(serializers.ModelSerializer):
@@ -358,76 +401,36 @@ class TbStudentDescriptorAchievementsSerializer(serializers.ModelSerializer):
 
 
 class TbStudentLearningProgressSerializer(serializers.ModelSerializer):
+    """
+    CORREÇÃO IMPORTANTE: O diagrama mostra conexão com id_descriptor
+    e o campo é descriptor_mastery, não competency_mastery.
+    """
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
-    competency_name = serializers.CharField(source='id_competency.competency_name', read_only=True)
+    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)
+    descriptor_code = serializers.CharField(source='id_descriptor.descriptor_code', read_only=True)
     
     class Meta:
         model = TbStudentLearningProgress
         fields = [
-            'id', 'id_student', 'student_name', 'id_competency',
-            'competency_name', 'id_exam_application', 'score',
-            'max_score', 'competency_mastery', 'assessment_date', 'created_at'
+            'id', 'id_student', 'student_name', 'id_descriptor',
+            'descriptor_code', 'descriptor_name', 'id_exam_application', 
+            'score', 'max_score', 'descriptor_mastery', 'assessment_date', 
+            'created_at'
         ]
 
-        
-# ============================================
-# SERIALIZERS DETALHADOS PARA PROVAS
-# ============================================
+class TbQuestionDescriptorSerializer(serializers.ModelSerializer):
+    """
+    Serializer para a tabela de relacionamento tb_question_descriptor (Presente no ERD).
+    Útil se uma questão avaliar múltiplos descritores além do principal.
+    """
+    question_text = serializers.CharField(source='id_question.question_text', read_only=True)
+    descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)
+    descriptor_code = serializers.CharField(source='id_descriptor.descriptor_code', read_only=True)
 
-class TbExamsDetailSerializer(serializers.ModelSerializer):
-    """Serializer detalhado com contagem de questões"""
-    questions_count = serializers.SerializerMethodField()
-    subject_name = serializers.CharField(source='subject', read_only=True)
-    
     class Meta:
-        model = TbExams
+        model = TbQuestionDescriptor
         fields = [
-            'id', 'exam_code', 'exam_name', 'subject', 'subject_name',
-            'school_year', 'total_questions', 'description', 
-            'questions_count', 'created_at'
+            'id', 'id_question', 'question_text', 
+            'id_descriptor', 'descriptor_code', 'descriptor_name', 
+            'created_at'
         ]
-    
-    def get_questions_count(self, obj):
-        return TbQuestions.objects.filter(id_exam=obj).count()
-
-
-class TbQuestionsCreateSerializer(serializers.ModelSerializer):
-    """Serializer para criação de questões"""
-    alternatives = TbAlternativesSerializer(many=True, required=False)
-    
-    class Meta:
-        model = TbQuestions
-        fields = [
-            'id', 'id_exam', 'question_number', 'question_text',
-            'question_type', 'correct_answer', 'skill_assessed',
-            'difficulty_level', 'points', 'id_descriptor', 'alternatives'
-        ]
-    
-    def create(self, validated_data):
-        alternatives_data = validated_data.pop('alternatives', [])
-        question = TbQuestions.objects.create(**validated_data)
-        
-        for alt_data in alternatives_data:
-            TbAlternatives.objects.create(id_question=question, **alt_data)
-        
-        return question
-
-
-class BulkStudentAnswersSerializer(serializers.Serializer):
-    """Serializer para lançamento em lote de respostas"""
-    id_student = serializers.IntegerField()
-    id_exam_application = serializers.IntegerField()
-    answers = serializers.ListField(
-        child=serializers.DictField()
-    )
-    
-    def validate(self, data):
-        # Validar se o aluno existe
-        if not TbStudents.objects.filter(id_student=data['id_student']).exists():
-            raise serializers.ValidationError("Aluno não encontrado")
-        
-        # Validar se a aplicação existe
-        if not TbExamApplications.objects.filter(id=data['id_exam_application']).exists():
-            raise serializers.ValidationError("Aplicação de exame não encontrada")
-        
-        return data

@@ -467,3 +467,12 @@ class TbStudentLearningProgress(models.Model):
 
     def __str__(self):
         return f"{self.id_student.student_name} - {self.id_competency.competency_name}"
+    
+class TbQuestionDescriptor(models.Model):
+    id_question = models.ForeignKey('TbQuestions', models.DO_NOTHING, db_column='id_question')
+    id_descriptor = models.ForeignKey('TbDescriptorsCatalog', models.DO_NOTHING, db_column='id_descriptor')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_question_descriptor'
