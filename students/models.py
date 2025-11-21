@@ -44,8 +44,9 @@ class TbSubject(models.Model):
     description = models.TextField(blank=True, null=True)
 
     class Meta:
+        managed = False
         # Define o nome da tabela no banco de dados
-        db_table = 'subjects' 
+        db_table = 'tb_subject'
         # Define o nome legível no singular e plural
         verbose_name = 'Disciplina'
         verbose_name_plural = 'Disciplinas'
@@ -154,6 +155,7 @@ class TbSchoolIdebIndicators(models.Model):
     regional_average = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     state_average = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     critical_threshold = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    actual_avg_score = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -170,6 +172,7 @@ class TbClassIdebIndicators(models.Model):
     fiscal_year = models.BigIntegerField()
     class_ideb_target = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     expected_avg_score = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    actual_avg_score = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -443,19 +446,19 @@ class TbStudentDescriptorAchievements(models.Model):  # ✅ Renomeado
 class TbStudentLearningProgress(models.Model):
     id = models.AutoField(primary_key=True)
     id_student = models.ForeignKey(TbStudents, on_delete=models.CASCADE, db_column='id_student')
-    id_competency = models.ForeignKey(
-        TbCompetencyIdeb, 
-        on_delete=models.CASCADE, 
-        db_column='id_competency'
+    id_descriptor = models.ForeignKey(
+        TbDescriptorsCatalog,
+        on_delete=models.CASCADE,
+        db_column='id_descriptor'
     )
     id_exam_application = models.ForeignKey(
-        TbExamApplications, 
-        on_delete=models.CASCADE, 
+        TbExamApplications,
+        on_delete=models.CASCADE,
         db_column='id_exam_application'
     )
     score = models.DecimalField(max_digits=10, decimal_places=2)
     max_score = models.DecimalField(max_digits=10, decimal_places=2)
-    competency_mastery = models.DecimalField(max_digits=5, decimal_places=2)
+    descriptor_mastery = models.DecimalField(max_digits=5, decimal_places=2)
     assessment_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -466,7 +469,7 @@ class TbStudentLearningProgress(models.Model):
         verbose_name_plural = 'Progressos de Aprendizagem'
 
     def __str__(self):
-        return f"{self.id_student.student_name} - {self.id_competency.competency_name}"
+        return f"{self.id_student.student_name} - {self.id_descriptor.descriptor_name}"
     
 class TbQuestionDescriptor(models.Model):
     id_question = models.ForeignKey('TbQuestions', models.DO_NOTHING, db_column='id_question')
