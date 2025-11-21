@@ -40,7 +40,9 @@ const StudentAnswers = () => {
         const response = await fetch(`${API_BASE_URL}/exam-applications/`);
         if (!response.ok) throw new Error("Erro ao carregar aplicações");
         const data = await response.json();
-        setExamApplications(data);
+        // Verificar se a resposta é paginada (objeto com 'results') ou array direto
+        const applications = Array.isArray(data) ? data : (data.results || []);
+        setExamApplications(applications);
         setError(null);
       } catch (err) {
         console.error("Erro:", err);
@@ -67,7 +69,8 @@ const StudentAnswers = () => {
         );
         if (!answersResponse.ok) throw new Error("Erro ao carregar respostas");
         const answersData = await answersResponse.json();
-        setStudentAnswers(answersData);
+        const answers = Array.isArray(answersData) ? answersData : (answersData.results || []);
+        setStudentAnswers(answers);
 
         // Carregar questões da prova
         const questionsResponse = await fetch(
@@ -75,19 +78,22 @@ const StudentAnswers = () => {
         );
         if (!questionsResponse.ok) throw new Error("Erro ao carregar questões");
         const questionsData = await questionsResponse.json();
-        setQuestions(questionsData);
+        const questions = Array.isArray(questionsData) ? questionsData : (questionsData.results || []);
+        setQuestions(questions);
 
         // Carregar alunos
         const studentsResponse = await fetch(`${API_BASE_URL}/students/`);
         if (!studentsResponse.ok) throw new Error("Erro ao carregar alunos");
         const studentsData = await studentsResponse.json();
-        setStudents(studentsData);
+        const students = Array.isArray(studentsData) ? studentsData : (studentsData.results || []);
+        setStudents(students);
 
         // Carregar descritores
         const descriptorsResponse = await fetch(`${API_BASE_URL}/descriptors/`);
         if (!descriptorsResponse.ok) throw new Error("Erro ao carregar descritores");
         const descriptorsData = await descriptorsResponse.json();
-        setDescriptors(descriptorsData);
+        const descriptors = Array.isArray(descriptorsData) ? descriptorsData : (descriptorsData.results || []);
+        setDescriptors(descriptors);
 
         setError(null);
       } catch (err) {
