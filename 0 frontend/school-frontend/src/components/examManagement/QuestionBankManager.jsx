@@ -23,20 +23,33 @@ const QuestionBankManager = ({ examId, onClose }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [questionsRes, descriptorsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/questions/?id_exam=${examId}`),
-        fetch(`${API_BASE_URL}/descriptors/`)
-      ]);
 
-      if (!questionsRes.ok || !descriptorsRes.ok) {
-        throw new Error('Erro ao buscar dados da API');
+      // Buscar questões
+      const questionsRes = await fetch(`${API_BASE_URL}/questions/?id_exam=${examId}`);
+      if (!questionsRes.ok) throw new Error('Erro ao buscar questões');
+      const questionsData = await questionsRes.json();
+      setQuestions(Array.isArray(questionsData) ? questionsData : questionsData.results || []);
+
+      // Buscar TODOS os descritores (sem paginação)
+      let allDescriptors = [];
+      let nextUrl = `${API_BASE_URL}/descriptors/?page_size=1000`; // Buscar muitos de uma vez
+
+      while (nextUrl) {
+        const descriptorsRes = await fetch(nextUrl);
+        if (!descriptorsRes.ok) throw new Error('Erro ao buscar descritores');
+
+        const descriptorsData = await descriptorsRes.json();
+
+        if (Array.isArray(descriptorsData)) {
+          allDescriptors = [...allDescriptors, ...descriptorsData];
+          nextUrl = null;
+        } else {
+          allDescriptors = [...allDescriptors, ...(descriptorsData.results || [])];
+          nextUrl = descriptorsData.next;
+        }
       }
 
-      const questionsData = await questionsRes.json();
-      const descriptorsData = await descriptorsRes.json();
-
-      setQuestions(Array.isArray(questionsData) ? questionsData : questionsData.results || []);
-      setDescriptors(Array.isArray(descriptorsData) ? descriptorsData : descriptorsData.results || []);
+      setDescriptors(allDescriptors);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       alert('Erro ao carregar questões e descritores. Verifique a conexão.');
@@ -324,6 +337,35 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [descriptorSearch, setDescriptorSearch] = useState('');
+  const [showDescriptorDropdown, setShowDescriptorDropdown] = useState(false);
+
+  // Filtrar descritores baseado na busca
+  const filteredDescriptors = descriptors.filter(desc => {
+    if (!descriptorSearch) return true;
+    const search = descriptorSearch.toLowerCase();
+    return (
+      desc.descriptor_code?.toLowerCase().includes(search) ||
+      desc.descriptor_name?.toLowerCase().includes(search) ||
+      desc.subject?.toLowerCase().includes(search) ||
+      desc.grade?.toLowerCase().includes(search)
+    );
+  });
+
+  // Encontrar o descritor selecionado
+  const selectedDescriptor = descriptors.find(desc => desc.id === formData.id_descriptor);
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDescriptorDropdown && !event.target.closest('.descriptor-search-container')) {
+        setShowDescriptorDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDescriptorDropdown]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -354,9 +396,10 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
       const questionData = {
         ...formData,
         id_descriptor: formData.id_descriptor || null,
-        alternatives: alternatives.map(alt => ({
-          ...alt,
-          alternative_text: alt.alternative_text.trim()
+        alternatives: alternatives.map((alt, index) => ({
+          alternative_order: index + 1,  // Converter para número (1, 2, 3, 4)
+          alternative_text: alt.alternative_text.trim(),
+          is_correct: alt.is_correct
         }))
       };
 
@@ -496,22 +539,92 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
           </select>
         </div>
 
-        <div>
+        <div className="descriptor-search-container">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Descritor (Competência)
           </label>
-          <select
-            value={formData.id_descriptor}
-            onChange={(e) => setFormData({ ...formData, id_descriptor: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Selecione um descritor</option>
-            {Array.isArray(descriptors) && descriptors.map(desc => (
-              <option key={desc.id} value={desc.id}>
-                {desc.descriptor_code} - {desc.descriptor_name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={descriptorSearch}
+                onChange={(e) => {
+                  setDescriptorSearch(e.target.value);
+                  setShowDescriptorDropdown(true);
+                }}
+                onFocus={() => setShowDescriptorDropdown(true)}
+                placeholder="Buscar descritor (código, nome, disciplina)..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Dropdown de resultados */}
+            {showDescriptorDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                {filteredDescriptors.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Nenhum descritor encontrado
+                  </div>
+                ) : (
+                  filteredDescriptors.slice(0, 50).map(desc => (
+                    <button
+                      key={desc.id}
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, id_descriptor: desc.id });
+                        setDescriptorSearch(`${desc.descriptor_code} - ${desc.descriptor_name}`);
+                        setShowDescriptorDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 transition-colors ${
+                        formData.id_descriptor === desc.id ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="font-semibold text-gray-800">
+                        {desc.descriptor_code} - {desc.descriptor_name}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        {desc.subject && <span className="mr-3">📚 {desc.subject}</span>}
+                        {desc.grade && <span>🎓 {desc.grade}</span>}
+                      </div>
+                    </button>
+                  ))
+                )}
+                {filteredDescriptors.length > 50 && (
+                  <div className="p-2 text-center text-sm text-gray-600 bg-gray-50">
+                    Mostrando 50 de {filteredDescriptors.length} resultados. Continue digitando para refinar.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Botão para limpar seleção */}
+            {formData.id_descriptor && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData({ ...formData, id_descriptor: '' });
+                  setDescriptorSearch('');
+                }}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Exibir descrição do descritor selecionado */}
+          {selectedDescriptor && selectedDescriptor.descriptor_description && (
+            <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <BookOpen className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-semibold text-blue-900 mb-1">Descrição do Descritor:</div>
+                  <p className="text-sm text-blue-800">{selectedDescriptor.descriptor_description}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
