@@ -50,13 +50,6 @@ class TbSchoolSerializer(serializers.ModelSerializer):
         }
 
 
-class TbSubjectSerializer(serializers.ModelSerializer):
-    """Serializer para disciplinas"""
-    class Meta:
-        model = TbSubject
-        fields = '__all__'
-
-
 class TbTeacherSubjectSerializer(serializers.ModelSerializer):
     """Serializer para a tabela intermediária"""
     subject_name = serializers.CharField(source='id_subject.subject_name', read_only=True)
@@ -108,15 +101,6 @@ class TbTeacherSerializer(serializers.ModelSerializer):
             for subject in subjects:
                 TbTeacherSubject.objects.create(id_teacher=instance, id_subject=subject)
         return instance
-
-
-class TbTeacherSubjectSerializer(serializers.ModelSerializer):
-    """Tabela intermediária Professor <-> Disciplina"""
-    subject_name = serializers.CharField(source='id_subject.subject_name', read_only=True)
-    
-    class Meta:
-        model = TbTeacherSubject
-        fields = ['id', 'id_teacher', 'id_subject', 'subject_name', 'created_at']
 
 
 class TbTeacherSchoolSerializer(serializers.ModelSerializer):
@@ -198,22 +182,6 @@ class TbClassIdebIndicatorsSerializer(serializers.ModelSerializer):
 # 4. DEFINIÇÃO DE PROVAS E QUESTÕES
 # ============================================
 
-class TbCompetencyIdebSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbCompetencyIdeb
-        fields = '__all__'
-
-
-class TbDescriptorsCatalogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbDescriptorsCatalog
-        fields = '__all__'
-
-
-# ============================================
-# SERIALIZERS DE EXAMES E QUESTÕES
-# ============================================
-
 class TbExamsSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbExams
@@ -224,37 +192,11 @@ class TbExamsSerializer(serializers.ModelSerializer):
         }
 
 
+# ✅ SERIALIZER CORRIGIDO PARA ALTERNATIVES
 class TbAlternativesSerializer(serializers.ModelSerializer):
-    alternative_letter = serializers.SerializerMethodField()  # ✅ Campo computado
-    
     class Meta:
         model = TbAlternatives
-        fields = [
-            'id', 
-            'id_question', 
-            'alternative_order',      # ✅ Campo real do banco
-            'alternative_letter',     # ✅ Campo computado (A, B, C, D...)
-            'alternative_text', 
-            'is_correct', 
-            'distractor_type', 
-            'created_at'
-        ]
-        read_only_fields = ['alternative_letter']  # Apenas leitura
-    
-    def get_alternative_letter(self, obj):
-        """Converte alternative_order para letra (1→A, 2→B, etc)"""
-        if obj.alternative_order and obj.alternative_order <= 26:
-            return chr(64 + obj.alternative_order)  # 1=A, 2=B, 3=C...
-        return str(obj.alternative_order)
-    
-    def validate_alternative_order(self, value):
-        """Valida se alternative_order é válido"""
-        if value < 1:
-            raise serializers.ValidationError("alternative_order deve ser maior que 0")
-        if value > 26:
-            raise serializers.ValidationError("alternative_order não pode ser maior que 26 (A-Z)")
-        return value
-
+        fields = '__all__'
 
 
 class TbQuestionsSerializer(serializers.ModelSerializer):
@@ -295,37 +237,11 @@ class TbQuestionsCreateSerializer(serializers.ModelSerializer):
         alternatives_data = validated_data.pop('alternatives', [])
         question = TbQuestions.objects.create(**validated_data)
         
-        # Criar alternativas com alternative_order correto
-        for idx, alt_data in enumerate(alternatives_data, start=1):
-            # Se não especificado, usar a ordem da lista (1, 2, 3, 4...)
-            if 'alternative_order' not in alt_data:
-                alt_data['alternative_order'] = idx
-            
+        for alt_data in alternatives_data:
             TbAlternatives.objects.create(id_question=question, **alt_data)
         
         return question
-    
-    def update(self, instance, validated_data):
-        alternatives_data = validated_data.pop('alternatives', None)
-        
-        # Atualizar questão
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        
-        # Atualizar alternativas se fornecidas
-        if alternatives_data is not None:
-            # Deletar alternativas antigas
-            TbAlternatives.objects.filter(id_question=instance).delete()
-            
-            # Criar novas alternativas
-            for idx, alt_data in enumerate(alternatives_data, start=1):
-                if 'alternative_order' not in alt_data:
-                    alt_data['alternative_order'] = idx
-                
-                TbAlternatives.objects.create(id_question=instance, **alt_data)
-        
-        return instance
+
 
 class TbQuestionCompetencySerializer(serializers.ModelSerializer):
     """Relacionamento Questão <-> Competência"""
@@ -335,12 +251,6 @@ class TbQuestionCompetencySerializer(serializers.ModelSerializer):
     class Meta:
         model = TbQuestionCompetency
         fields = ['id_question', 'question_text', 'id_competency', 'competency_name']
-
-
-class TbExamsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbExams
-        fields = '__all__'
 
 
 class TbExamsDetailSerializer(serializers.ModelSerializer):
@@ -530,8 +440,7 @@ class TbStudentDescriptorAchievementsSerializer(serializers.ModelSerializer):
 
 class TbStudentLearningProgressSerializer(serializers.ModelSerializer):
     """
-    CORREÇÃO IMPORTANTE: O diagrama mostra conexão com id_descriptor
-    e o campo é descriptor_mastery, não competency_mastery.
+    Serializer para progresso de aprendizagem do aluno
     """
     student_name = serializers.CharField(source='id_student.student_name', read_only=True)
     descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)
@@ -546,10 +455,10 @@ class TbStudentLearningProgressSerializer(serializers.ModelSerializer):
             'created_at'
         ]
 
+
 class TbQuestionDescriptorSerializer(serializers.ModelSerializer):
     """
-    Serializer para a tabela de relacionamento tb_question_descriptor (Presente no ERD).
-    Útil se uma questão avaliar múltiplos descritores além do principal.
+    Serializer para a tabela de relacionamento tb_question_descriptor
     """
     question_text = serializers.CharField(source='id_question.question_text', read_only=True)
     descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True)
