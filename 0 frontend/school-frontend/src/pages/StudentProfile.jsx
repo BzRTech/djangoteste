@@ -1,25 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
-  User, GraduationCap, School, Calendar, Target, TrendingUp,
-  Award, ChevronLeft, CheckCircle, XCircle, FileText,
-  BookOpen, AlertCircle, Trophy, BarChart3, Clock
-} from 'lucide-react';
+  User,
+  GraduationCap,
+  School,
+  Calendar,
+  Target,
+  TrendingUp,
+  Award,
+  ChevronLeft,
+  CheckCircle,
+  XCircle,
+  FileText,
+  BookOpen,
+  AlertCircle,
+  Trophy,
+  BarChart3,
+  Clock,
+} from "lucide-react";
 import {
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend
-} from 'recharts';
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 const StudentProfile = () => {
   // Pega ID do aluno da URL (simulado aqui, no React Router seria useParams)
-  const studentId = window.location.pathname.split('/').pop() || '1';
-  
+  const studentId = window.location.pathname.split("/").pop() || "1";
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     fetchProfile();
@@ -28,7 +51,9 @@ const StudentProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/student-profile/${studentId}/profile/`);
+      const response = await fetch(
+        `${API_BASE_URL}/student-profile/${studentId}`
+      );
 
       if (!response.ok) {
         throw new Error(`Erro ao carregar perfil: ${response.status}`);
@@ -38,7 +63,7 @@ const StudentProfile = () => {
       setProfile(data);
       setError(null);
     } catch (err) {
-      console.error('Erro:', err);
+      console.error("Erro:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -50,7 +75,9 @@ const StudentProfile = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 text-lg">Carregando perfil do aluno...</p>
+          <p className="mt-4 text-gray-600 text-lg">
+            Carregando perfil do aluno...
+          </p>
         </div>
       </div>
     );
@@ -61,7 +88,9 @@ const StudentProfile = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">Erro ao carregar</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">
+            Erro ao carregar
+          </h2>
           <p className="text-gray-600 mb-4 text-center">{error}</p>
           <div className="flex gap-2">
             <button
@@ -71,7 +100,7 @@ const StudentProfile = () => {
               Tentar Novamente
             </button>
             <button
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={() => (window.location.href = "/dashboard")}
               className="flex-1 bg-gray-300 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-400 transition"
             >
               Voltar
@@ -89,7 +118,7 @@ const StudentProfile = () => {
           <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
           <p className="text-gray-600 mb-4">Nenhum dado disponível</p>
           <button
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => (window.location.href = "/dashboard")}
             className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"
           >
             Voltar ao Dashboard
@@ -101,9 +130,9 @@ const StudentProfile = () => {
 
   // Preparação dos dados para gráficos
   const competencyRadarData = profile.recent_progress
-    ? profile.recent_progress.slice(0, 6).map(p => ({
-        competency: p.descriptor_name?.substring(0, 15) + '...' || 'N/A',
-        mastery: p.descriptor_mastery || 0
+    ? profile.recent_progress.slice(0, 6).map((p) => ({
+        competency: p.descriptor_name?.substring(0, 15) + "..." || "N/A",
+        mastery: p.descriptor_mastery || 0,
       }))
     : [];
 
@@ -112,7 +141,7 @@ const StudentProfile = () => {
         subject,
         conquistados: data.achieved,
         total: data.total,
-        percentual: Math.round((data.achieved / data.total) * 100)
+        percentual: Math.round((data.achieved / data.total) * 100),
       }))
     : [];
 
@@ -121,7 +150,7 @@ const StudentProfile = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header com botão voltar */}
         <button
-          onClick={() => window.location.href = '/dashboard'}
+          onClick={() => (window.location.href = "/dashboard")}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-6 transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -146,34 +175,40 @@ const StudentProfile = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <School className="w-5 h-5" />
-                    <span>{profile.school_name || 'Escola não informada'}</span>
+                    <span>{profile.school_name || "Escola não informada"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-5 h-5" />
-                    <span>{profile.class_name || 'Turma não informada'}</span>
+                    <span>{profile.class_name || "Turma não informada"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-5 h-5" />
-                    <span>Série: {profile.grade || 'Não informada'}</span>
+                    <span>Série: {profile.grade || "Não informada"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5" />
-                    <span>Turno: {
-                      profile.shift === 'morning' ? 'Matutino' :
-                      profile.shift === 'afternoon' ? 'Vespertino' :
-                      profile.shift === 'night' ? 'Noturno' :
-                      profile.shift || 'Não informado'
-                    }</span>
+                    <span>
+                      Turno:{" "}
+                      {profile.shift === "morning"
+                        ? "Matutino"
+                        : profile.shift === "afternoon"
+                        ? "Vespertino"
+                        : profile.shift === "night"
+                        ? "Noturno"
+                        : profile.shift || "Não informado"}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-              profile.status === 'enrolled'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-gray-100 text-gray-800'
-            }`}>
-              {profile.status === 'enrolled' ? 'Matriculado' : profile.status}
+            <span
+              className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                profile.status === "enrolled"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-gray-100 text-gray-800"
+              }`}
+            >
+              {profile.status === "enrolled" ? "Matriculado" : profile.status}
             </span>
           </div>
         </div>
@@ -201,9 +236,12 @@ const StudentProfile = () => {
           />
           <StatCard
             title="Última Avaliação"
-            value={profile.recent_progress?.[0]
-              ? new Date(profile.recent_progress[0].assessment_date).toLocaleDateString('pt-BR')
-              : 'N/A'
+            value={
+              profile.recent_progress?.[0]
+                ? new Date(
+                    profile.recent_progress[0].assessment_date
+                  ).toLocaleDateString("pt-BR")
+                : "N/A"
             }
             icon={Calendar}
             color="orange"
@@ -214,48 +252,44 @@ const StudentProfile = () => {
         <div className="bg-white rounded-xl shadow-lg mb-8">
           <div className="flex border-b border-gray-200 overflow-x-auto">
             <TabButton
-              active={activeTab === 'overview'}
-              onClick={() => setActiveTab('overview')}
+              active={activeTab === "overview"}
+              onClick={() => setActiveTab("overview")}
               icon={BarChart3}
               label="Visão Geral"
             />
             <TabButton
-              active={activeTab === 'descriptors'}
-              onClick={() => setActiveTab('descriptors')}
+              active={activeTab === "descriptors"}
+              onClick={() => setActiveTab("descriptors")}
               icon={Target}
               label="Descritores"
             />
             <TabButton
-              active={activeTab === 'exams'}
-              onClick={() => setActiveTab('exams')}
+              active={activeTab === "exams"}
+              onClick={() => setActiveTab("exams")}
               icon={FileText}
               label="Provas"
             />
             <TabButton
-              active={activeTab === 'progress'}
-              onClick={() => setActiveTab('progress')}
+              active={activeTab === "progress"}
+              onClick={() => setActiveTab("progress")}
               icon={TrendingUp}
               label="Progresso"
             />
           </div>
 
           <div className="p-6">
-            {activeTab === 'overview' && (
-              <OverviewTab 
+            {activeTab === "overview" && (
+              <OverviewTab
                 competencyRadarData={competencyRadarData}
                 descriptorsBySubjectData={descriptorsBySubjectData}
                 profile={profile}
               />
             )}
-            {activeTab === 'descriptors' && (
+            {activeTab === "descriptors" && (
               <DescriptorsTab profile={profile} />
             )}
-            {activeTab === 'exams' && (
-              <ExamsTab profile={profile} />
-            )}
-            {activeTab === 'progress' && (
-              <ProgressTab profile={profile} />
-            )}
+            {activeTab === "exams" && <ExamsTab profile={profile} />}
+            {activeTab === "progress" && <ProgressTab profile={profile} />}
           </div>
         </div>
       </div>
@@ -266,10 +300,10 @@ const StudentProfile = () => {
 // Componentes auxiliares
 const StatCard = ({ title, value, total, icon: Icon, color }) => {
   const colors = {
-    blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
-    green: { bg: 'bg-green-100', text: 'text-green-600' },
-    purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
-    orange: { bg: 'bg-orange-100', text: 'text-orange-600' },
+    blue: { bg: "bg-blue-100", text: "text-blue-600" },
+    green: { bg: "bg-green-100", text: "text-green-600" },
+    purple: { bg: "bg-purple-100", text: "text-purple-600" },
+    orange: { bg: "bg-orange-100", text: "text-orange-600" },
   };
 
   return (
@@ -295,8 +329,8 @@ const TabButton = ({ active, onClick, icon: Icon, label }) => (
     onClick={onClick}
     className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
       active
-        ? 'border-b-2 border-blue-600 text-blue-600'
-        : 'text-gray-600 hover:text-gray-800'
+        ? "border-b-2 border-blue-600 text-blue-600"
+        : "text-gray-600 hover:text-gray-800"
     }`}
   >
     <Icon className="w-5 h-5" />
@@ -304,7 +338,11 @@ const TabButton = ({ active, onClick, icon: Icon, label }) => (
   </button>
 );
 
-const OverviewTab = ({ competencyRadarData, descriptorsBySubjectData, profile }) => (
+const OverviewTab = ({
+  competencyRadarData,
+  descriptorsBySubjectData,
+  profile,
+}) => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {competencyRadarData.length > 0 && (
@@ -353,7 +391,9 @@ const OverviewTab = ({ competencyRadarData, descriptorsBySubjectData, profile })
     </div>
 
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
-      <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Resumo do Desempenho</h3>
+      <h3 className="text-xl font-bold text-gray-800 mb-4">
+        📊 Resumo do Desempenho
+      </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg p-4">
           <p className="text-sm text-gray-600">Total de Descritores</p>
@@ -370,7 +410,8 @@ const OverviewTab = ({ competencyRadarData, descriptorsBySubjectData, profile })
         <div className="bg-white rounded-lg p-4">
           <p className="text-sm text-gray-600">Descritores Pendentes</p>
           <p className="text-2xl font-bold text-orange-600">
-            {(profile.descriptors?.total_count || 0) - (profile.descriptors?.achieved_count || 0)}
+            {(profile.descriptors?.total_count || 0) -
+              (profile.descriptors?.achieved_count || 0)}
           </p>
         </div>
       </div>
@@ -379,41 +420,52 @@ const OverviewTab = ({ competencyRadarData, descriptorsBySubjectData, profile })
 );
 
 const DescriptorsTab = ({ profile }) => {
-  const [selectedSubject, setSelectedSubject] = useState('Todos');
+  const [selectedSubject, setSelectedSubject] = useState("Todos");
 
   if (!profile.descriptors?.by_subject) {
-    return <p className="text-gray-500 text-center py-8">Nenhum descritor disponível</p>;
+    return (
+      <p className="text-gray-500 text-center py-8">
+        Nenhum descritor disponível
+      </p>
+    );
   }
 
   const subjects = Object.keys(profile.descriptors.by_subject);
-  const filteredSubjects = selectedSubject === 'Todos'
-    ? profile.descriptors.by_subject
-    : { [selectedSubject]: profile.descriptors.by_subject[selectedSubject] };
+  const filteredSubjects =
+    selectedSubject === "Todos"
+      ? profile.descriptors.by_subject
+      : { [selectedSubject]: profile.descriptors.by_subject[selectedSubject] };
 
   return (
     <div className="space-y-8">
       <div className="bg-blue-50 rounded-xl p-6 mb-6">
         <h3 className="text-xl font-bold text-gray-800 mb-2">
-          🎯 Descritores da Série: {profile.grade || 'Não informada'}
-          {profile.shift && ` - Turno ${
-            profile.shift === 'morning' ? 'Matutino' :
-            profile.shift === 'afternoon' ? 'Vespertino' :
-            profile.shift === 'night' ? 'Noturno' : profile.shift
-          }`}
+          🎯 Descritores da Série: {profile.grade || "Não informada"}
+          {profile.shift &&
+            ` - Turno ${
+              profile.shift === "morning"
+                ? "Matutino"
+                : profile.shift === "afternoon"
+                ? "Vespertino"
+                : profile.shift === "night"
+                ? "Noturno"
+                : profile.shift
+            }`}
         </h3>
         <p className="text-gray-600">
-          Visualize abaixo todos os descritores da série do aluno. Verde = Conquistado | Vermelho = Não conquistado
+          Visualize abaixo todos os descritores da série do aluno. Verde =
+          Conquistado | Vermelho = Não conquistado
         </p>
       </div>
 
       {/* Filtro por disciplina */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button
-          onClick={() => setSelectedSubject('Todos')}
+          onClick={() => setSelectedSubject("Todos")}
           className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            selectedSubject === 'Todos'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+            selectedSubject === "Todos"
+              ? "bg-blue-600 text-white shadow-md"
+              : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
           }`}
         >
           Todas as Disciplinas
@@ -424,8 +476,8 @@ const DescriptorsTab = ({ profile }) => {
             onClick={() => setSelectedSubject(subject)}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
               selectedSubject === subject
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
             }`}
           >
             {subject}
@@ -464,8 +516,8 @@ const DescriptorsTab = ({ profile }) => {
                 key={desc.id}
                 className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${
                   desc.achieved
-                    ? 'bg-green-50 border-green-500 shadow-md'
-                    : 'bg-red-50 border-red-300 opacity-70'
+                    ? "bg-green-50 border-green-500 shadow-md"
+                    : "bg-red-50 border-red-300 opacity-70"
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">
@@ -482,12 +534,14 @@ const DescriptorsTab = ({ profile }) => {
                   {desc.name}
                 </p>
                 <div className="mt-2">
-                  <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                    desc.achieved 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {desc.achieved ? 'Conquistado ✓' : 'Não conquistado'}
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded ${
+                      desc.achieved
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {desc.achieved ? "Conquistado ✓" : "Não conquistado"}
                   </span>
                 </div>
               </div>
@@ -510,9 +564,11 @@ const ExamsTab = ({ profile }) => {
   }
 
   const getStatusBadge = (percentage) => {
-    if (percentage >= 70) return { color: 'bg-green-100 text-green-800', label: 'Aprovado' };
-    if (percentage >= 50) return { color: 'bg-yellow-100 text-yellow-800', label: 'Recuperação' };
-    return { color: 'bg-red-100 text-red-800', label: 'Insuficiente' };
+    if (percentage >= 70)
+      return { color: "bg-green-100 text-green-800", label: "Aprovado" };
+    if (percentage >= 50)
+      return { color: "bg-yellow-100 text-yellow-800", label: "Recuperação" };
+    return { color: "bg-red-100 text-red-800", label: "Insuficiente" };
   };
 
   return (
@@ -530,12 +586,24 @@ const ExamsTab = ({ profile }) => {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prova</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nota</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acertos</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aproveitamento</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Prova
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Data
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Nota
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Acertos
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Aproveitamento
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -547,16 +615,21 @@ const ExamsTab = ({ profile }) => {
                     {exam.exam_name}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(exam.application_date).toLocaleDateString('pt-BR')}
+                    {new Date(exam.application_date).toLocaleDateString(
+                      "pt-BR"
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    <span className="font-bold">{exam.total_score}</span> / {exam.max_score}
+                    <span className="font-bold">{exam.total_score}</span> /{" "}
+                    {exam.max_score}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {exam.correct_answers} acertos
                   </td>
                   <td className="px-6 py-4 text-sm">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge.color}`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge.color}`}
+                    >
                       {statusBadge.label}
                     </span>
                   </td>
@@ -565,13 +638,18 @@ const ExamsTab = ({ profile }) => {
                       <div className="flex-1 bg-gray-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full ${
-                            exam.percentage >= 70 ? 'bg-green-500' :
-                            exam.percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            exam.percentage >= 70
+                              ? "bg-green-500"
+                              : exam.percentage >= 50
+                              ? "bg-yellow-500"
+                              : "bg-red-500"
                           }`}
                           style={{ width: `${exam.percentage}%` }}
                         />
                       </div>
-                      <span className="font-bold text-gray-700">{exam.percentage}%</span>
+                      <span className="font-bold text-gray-700">
+                        {exam.percentage}%
+                      </span>
                     </div>
                   </td>
                 </tr>
@@ -607,14 +685,20 @@ const ProgressTab = ({ profile }) => {
 
       <div className="grid grid-cols-1 gap-4">
         {profile.recent_progress.map((progress, idx) => (
-          <div key={idx} className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+          <div
+            key={idx}
+            className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
                 <h4 className="text-lg font-bold text-gray-800 mb-1">
                   {progress.descriptor_name}
                 </h4>
                 <p className="text-sm text-gray-500">
-                  Avaliado em: {new Date(progress.assessment_date).toLocaleDateString('pt-BR')}
+                  Avaliado em:{" "}
+                  {new Date(progress.assessment_date).toLocaleDateString(
+                    "pt-BR"
+                  )}
                 </p>
               </div>
               <div className="text-right">
@@ -627,13 +711,18 @@ const ProgressTab = ({ profile }) => {
 
             <div className="mb-3">
               <div className="flex justify-between text-sm text-gray-600 mb-1">
-                <span>Pontuação: {progress.score} / {progress.max_score}</span>
+                <span>
+                  Pontuação: {progress.score} / {progress.max_score}
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
                   className={`h-3 rounded-full ${
-                    progress.descriptor_mastery >= 70 ? 'bg-green-500' :
-                    progress.descriptor_mastery >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                    progress.descriptor_mastery >= 70
+                      ? "bg-green-500"
+                      : progress.descriptor_mastery >= 50
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
                   }`}
                   style={{ width: `${progress.descriptor_mastery}%` }}
                 />

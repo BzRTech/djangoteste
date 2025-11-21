@@ -33,10 +33,11 @@ const ExamsManagement = () => {
   const [error, setError] = useState(null);
   const [showExamForm, setShowExamForm] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
- // const [selectedExam, setSelectedExam] = useState(null);
+  // const [selectedExam, setSelectedExam] = useState(null);
   const [examResults, setExamResults] = useState([]);
   const [students, setStudents] = useState([]);
-  const [selectedExamForQuestions, setSelectedExamForQuestions] = useState(null);
+  const [selectedExamForQuestions, setSelectedExamForQuestions] =
+    useState(null);
 
   // Função helper para buscar TODOS os dados de um endpoint
   const fetchAllData = async (endpoint) => {
@@ -79,21 +80,21 @@ const ExamsManagement = () => {
     try {
       setLoading(true);
       const [
-        examsArray, 
-        applicationsArray, 
-        subjectsArray, 
-        classesArray, 
+        examsArray,
+        applicationsArray,
+        subjectsArray,
+        classesArray,
         teachersArray,
-        resultsArray,      // NOVO
-        studentsArray      // NOVO
+        resultsArray, // NOVO
+        studentsArray, // NOVO
       ] = await Promise.all([
         fetchAllData("/exams/"),
         fetchAllData("/exam-applications/"),
         fetchAllData("/subjects/"),
         fetchAllData("/classes/"),
         fetchAllData("/teachers/"),
-        fetchAllData("/exam-results/"),     // NOVO
-        fetchAllData("/students/")          // NOVO
+        fetchAllData("/exam-results/"), // NOVO
+        fetchAllData("/students/"), // NOVO
       ]);
 
       setExams(examsArray);
@@ -101,8 +102,8 @@ const ExamsManagement = () => {
       setSubjects(subjectsArray);
       setClasses(classesArray);
       setTeachers(teachersArray);
-      setExamResults(resultsArray);         // NOVO
-      setStudents(studentsArray);           // NOVO
+      setExamResults(resultsArray); // NOVO
+      setStudents(studentsArray); // NOVO
       setError(null);
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
@@ -113,15 +114,17 @@ const ExamsManagement = () => {
   };
 
   // No render, passe os novos props para ResultsTab
-  {activeTab === "results" && (
-  <ResultsTab 
-    applications={applications}
-    examResults={examResults}      // 👈 NOVO
-    students={students}            // 👈 NOVO
-    exams={exams}                  // 👈 NOVO
-    classes={classes}              // 👈 NOVO
-  />
-)}
+  {
+    activeTab === "results" && (
+      <ResultsTab
+        applications={applications}
+        examResults={examResults} // 👈 NOVO
+        students={students} // 👈 NOVO
+        exams={exams} // 👈 NOVO
+        classes={classes} // 👈 NOVO
+      />
+    );
+  }
 
   const handleDelete = async (id, type) => {
     if (!window.confirm("Tem certeza que deseja deletar?")) return;
@@ -149,10 +152,8 @@ const ExamsManagement = () => {
     { id: "results", label: "Resultados", icon: TrendingUp },
   ];
 
-    if (loading) {
-    return (
-      <Loading/>
-    );
+  if (loading) {
+    return <Loading />;
   }
 
   if (error) {
@@ -204,7 +205,9 @@ const ExamsManagement = () => {
           />
           <StatCard
             title="Em Andamento"
-            value={applications.filter((a) => a.status === "in_progress").length}
+            value={
+              applications.filter((a) => a.status === "in_progress").length
+            }
             icon={Users}
             color="orange"
           />
@@ -273,7 +276,9 @@ const ExamsManagement = () => {
                 setShowForm={setShowApplicationForm}
               />
             )}
-            {activeTab === "results" && <ResultsTab applications={applications} />}
+            {activeTab === "results" && (
+              <ResultsTab applications={applications} />
+            )}
           </div>
         </div>
       </div>
@@ -312,7 +317,16 @@ const StatCard = ({ title, value, icon: Icon, color }) => {
 // ============================================
 // EXAMS TAB
 // ============================================
-const ExamsTab = ({ exams, subjects, onRefresh, onDelete, onEdit, showForm, setShowForm, onManageQuestions }) => {
+const ExamsTab = ({
+  exams,
+  subjects,
+  onRefresh,
+  onDelete,
+  onEdit,
+  showForm,
+  setShowForm,
+  onManageQuestions,
+}) => {
   const handleNewExam = () => {
     onEdit(null);
   };
@@ -473,7 +487,10 @@ const ExamForm = ({ subjects, onClose, onSave }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-gray-50 p-6 rounded-lg">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 bg-gray-50 p-6 rounded-lg"
+    >
       <h3 className="text-xl font-bold mb-4">Nova Prova</h3>
 
       <div className="grid grid-cols-2 gap-4">
@@ -501,7 +518,10 @@ const ExamForm = ({ subjects, onClose, onSave }) => {
             required
             value={formData.school_year}
             onChange={(e) =>
-              setFormData({ ...formData, school_year: parseInt(e.target.value) })
+              setFormData({
+                ...formData,
+                school_year: parseInt(e.target.value),
+              })
             }
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
@@ -547,7 +567,10 @@ const ExamForm = ({ subjects, onClose, onSave }) => {
             type="number"
             value={formData.total_questions}
             onChange={(e) =>
-              setFormData({ ...formData, total_questions: parseInt(e.target.value) })
+              setFormData({
+                ...formData,
+                total_questions: parseInt(e.target.value),
+              })
             }
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
@@ -726,19 +749,27 @@ const ApplicationsTab = ({
 // ============================================
 // APPLICATION FORM
 // ============================================
-const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSave }) => {
+const ApplicationForm = ({
+  application,
+  exams,
+  classes,
+  teachers,
+  onClose,
+  onSave,
+}) => {
   const [formData, setFormData] = useState({
-    id_exam: application?.id_exam || '',
-    id_class: application?.id_class || '',
-    id_teacher: application?.id_teacher || '',
-    application_date: application?.application_date || new Date().toISOString().split('T')[0],
-    start_time: application?.start_time || '',           // ✅ Deve existir
-    end_time: application?.end_time || '',               // ✅ Deve existir
-    status: application?.status || 'scheduled',
-    observations: application?.observations || '',
-    application_type: application?.application_type || '',
-    assessment_period: application?.assessment_period || '',
-    fiscal_year: application?.fiscal_year || new Date().getFullYear(),  // ✅ Deve existir
+    id_exam: application?.id_exam || "",
+    id_class: application?.id_class || "",
+    id_teacher: application?.id_teacher || "",
+    application_date:
+      application?.application_date || new Date().toISOString().split("T")[0],
+    start_time: application?.start_time || "", // ✅ Deve existir
+    end_time: application?.end_time || "", // ✅ Deve existir
+    status: application?.status || "scheduled",
+    observations: application?.observations || "",
+    application_type: application?.application_type || "",
+    assessment_period: application?.assessment_period || "",
+    fiscal_year: application?.fiscal_year || new Date().getFullYear(), // ✅ Deve existir
   });
   const [saving, setSaving] = useState(false);
 
@@ -761,18 +792,20 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
       if (formData.start_time) cleanData.start_time = formData.start_time;
       if (formData.end_time) cleanData.end_time = formData.end_time;
       if (formData.observations) cleanData.observations = formData.observations;
-      if (formData.application_type) cleanData.application_type = formData.application_type;
-      if (formData.assessment_period) cleanData.assessment_period = formData.assessment_period;
+      if (formData.application_type)
+        cleanData.application_type = formData.application_type;
+      if (formData.assessment_period)
+        cleanData.assessment_period = formData.assessment_period;
 
       const url = application
         ? `${API_BASE_URL}/exam-applications/${application.id}/`
         : `${API_BASE_URL}/exam-applications/`;
 
-      const method = application ? 'PUT' : 'POST';
+      const method = application ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(cleanData),
       });
 
@@ -781,21 +814,24 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
         onClose();
       } else {
         const errorData = await response.json();
-        console.error('Erro ao salvar:', errorData);
+        console.error("Erro ao salvar:", errorData);
         alert(`Erro ao salvar aplicação: ${JSON.stringify(errorData)}`);
       }
     } catch (error) {
-      console.error('Erro ao salvar:', error);
-      alert('Erro ao salvar aplicação');
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao salvar aplicação");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-gray-50 p-6 rounded-lg">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 bg-gray-50 p-6 rounded-lg"
+    >
       <h3 className="text-xl font-bold mb-4">
-        {application ? 'Editar' : 'Nova'} Aplicação de Prova
+        {application ? "Editar" : "Nova"} Aplicação de Prova
       </h3>
 
       <div>
@@ -805,7 +841,9 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
         <select
           required
           value={formData.id_exam}
-          onChange={(e) => setFormData({ ...formData, id_exam: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, id_exam: e.target.value })
+          }
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
         >
           <option value="">Selecione uma prova</option>
@@ -824,7 +862,9 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
         <select
           required
           value={formData.id_class}
-          onChange={(e) => setFormData({ ...formData, id_class: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, id_class: e.target.value })
+          }
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
         >
           <option value="">Selecione uma turma</option>
@@ -843,7 +883,9 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
         <select
           required
           value={formData.id_teacher}
-          onChange={(e) => setFormData({ ...formData, id_teacher: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, id_teacher: e.target.value })
+          }
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
         >
           <option value="">Selecione um professor</option>
@@ -994,7 +1036,7 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
           disabled={saving}
           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
         >
-          {saving ? 'Salvando...' : 'Salvar'}
+          {saving ? "Salvando..." : "Salvar"}
         </button>
         <button
           type="button"
@@ -1008,5 +1050,5 @@ const ApplicationForm = ({ application, exams, classes, teachers, onClose, onSav
   );
 };
 
-<ResultsTab/>
+<ResultsTab />;
 export default ExamsManagement;
