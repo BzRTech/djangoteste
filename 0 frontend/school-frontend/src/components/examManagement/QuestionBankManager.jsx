@@ -403,11 +403,15 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
         }))
       };
 
+      console.log('Enviando dados para API:', questionData);
+
       const url = question
         ? `${API_BASE_URL}/questions/${question.id}/`
         : `${API_BASE_URL}/questions/`;
 
       const method = question ? 'PUT' : 'POST';
+
+      console.log(`${method} ${url}`);
 
       const response = await fetch(url, {
         method,
@@ -416,20 +420,38 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro da API:', errorData);
+        // Tentar pegar o erro como JSON, se falhar pegar como texto
+        let errorMessage = `Erro ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('Erro da API (JSON):', errorData);
 
-        // Mensagens de erro mais amigáveis
-        if (response.status === 400) {
-          const errorMessages = Object.entries(errorData)
-            .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
-            .join('\n');
-          throw new Error(errorMessages || 'Dados inválidos');
-        } else if (response.status === 404) {
-          throw new Error('Prova não encontrada');
-        } else {
-          throw new Error(`Erro ${response.status}: ${JSON.stringify(errorData)}`);
+          // Mensagens de erro mais amigáveis
+          if (response.status === 400) {
+            const errorMessages = Object.entries(errorData)
+              .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+              .join('\n');
+            errorMessage = errorMessages || 'Dados inválidos';
+          } else if (response.status === 404) {
+            errorMessage = 'Prova não encontrada';
+          } else {
+            errorMessage = `Erro ${response.status}: ${JSON.stringify(errorData)}`;
+          }
+        } catch (jsonError) {
+          // Se não conseguiu parsear como JSON, pegar como texto
+          const errorText = await response.text();
+          console.error('Erro da API (Texto):', errorText);
+
+          // Tentar extrair mensagem de erro do HTML
+          const match = errorText.match(/<pre>(.*?)<\/pre>/s);
+          if (match) {
+            errorMessage = `Erro ${response.status}: ${match[1].substring(0, 500)}`;
+          } else {
+            errorMessage = `Erro ${response.status}: Erro no servidor. Verifique os logs do Django.`;
+          }
         }
+
+        throw new Error(errorMessage);
       }
 
       onSave();
