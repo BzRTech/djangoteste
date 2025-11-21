@@ -64,7 +64,6 @@ class TbTeacherSubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbTeacherSubject
         fields = ['id', 'id_teacher', 'id_subject', 'subject_name', 'created_at']
->>>>>>> 34eb5207ca00212ce84f9cde7c917684ebcd85f0
 
 
 class TbTeacherSerializer(serializers.ModelSerializer):
@@ -199,8 +198,6 @@ class TbClassIdebIndicatorsSerializer(serializers.ModelSerializer):
 # 4. DEFINIÇÃO DE PROVAS E QUESTÕES
 # ============================================
 
-<<<<<<< HEAD
-=======
 class TbCompetencyIdebSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbCompetencyIdeb
@@ -227,11 +224,37 @@ class TbExamsSerializer(serializers.ModelSerializer):
         }
 
 
->>>>>>> 34eb5207ca00212ce84f9cde7c917684ebcd85f0
 class TbAlternativesSerializer(serializers.ModelSerializer):
+    alternative_letter = serializers.SerializerMethodField()  # ✅ Campo computado
+    
     class Meta:
         model = TbAlternatives
-        fields = '__all__'
+        fields = [
+            'id', 
+            'id_question', 
+            'alternative_order',      # ✅ Campo real do banco
+            'alternative_letter',     # ✅ Campo computado (A, B, C, D...)
+            'alternative_text', 
+            'is_correct', 
+            'distractor_type', 
+            'created_at'
+        ]
+        read_only_fields = ['alternative_letter']  # Apenas leitura
+    
+    def get_alternative_letter(self, obj):
+        """Converte alternative_order para letra (1→A, 2→B, etc)"""
+        if obj.alternative_order and obj.alternative_order <= 26:
+            return chr(64 + obj.alternative_order)  # 1=A, 2=B, 3=C...
+        return str(obj.alternative_order)
+    
+    def validate_alternative_order(self, value):
+        """Valida se alternative_order é válido"""
+        if value < 1:
+            raise serializers.ValidationError("alternative_order deve ser maior que 0")
+        if value > 26:
+            raise serializers.ValidationError("alternative_order não pode ser maior que 26 (A-Z)")
+        return value
+
 
 
 class TbQuestionsSerializer(serializers.ModelSerializer):
@@ -272,11 +295,37 @@ class TbQuestionsCreateSerializer(serializers.ModelSerializer):
         alternatives_data = validated_data.pop('alternatives', [])
         question = TbQuestions.objects.create(**validated_data)
         
-        for alt_data in alternatives_data:
+        # Criar alternativas com alternative_order correto
+        for idx, alt_data in enumerate(alternatives_data, start=1):
+            # Se não especificado, usar a ordem da lista (1, 2, 3, 4...)
+            if 'alternative_order' not in alt_data:
+                alt_data['alternative_order'] = idx
+            
             TbAlternatives.objects.create(id_question=question, **alt_data)
         
         return question
-
+    
+    def update(self, instance, validated_data):
+        alternatives_data = validated_data.pop('alternatives', None)
+        
+        # Atualizar questão
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Atualizar alternativas se fornecidas
+        if alternatives_data is not None:
+            # Deletar alternativas antigas
+            TbAlternatives.objects.filter(id_question=instance).delete()
+            
+            # Criar novas alternativas
+            for idx, alt_data in enumerate(alternatives_data, start=1):
+                if 'alternative_order' not in alt_data:
+                    alt_data['alternative_order'] = idx
+                
+                TbAlternatives.objects.create(id_question=instance, **alt_data)
+        
+        return instance
 
 class TbQuestionCompetencySerializer(serializers.ModelSerializer):
     """Relacionamento Questão <-> Competência"""

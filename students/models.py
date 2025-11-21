@@ -282,26 +282,6 @@ class TbQuestions(models.Model):
         return f"Questão {self.question_number} - {self.id_exam.exam_name}"
 
 
-class TbAlternatives(models.Model):
-    id = models.AutoField(primary_key=True)
-    id_question = models.ForeignKey(TbQuestions, on_delete=models.CASCADE, db_column='id_question')
-    alternative_letter = models.CharField(max_length=1)
-    alternative_text = models.TextField()
-    is_correct = models.BooleanField(default=False)
-    descriptor_type = models.CharField(max_length=100, blank=True, null=True)  # ✅ Renomeado
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        managed = False
-        db_table = 'tb_alternatives'
-        verbose_name = 'Alternativa'
-        verbose_name_plural = 'Alternativas'
-        unique_together = [['id_question', 'alternative_letter']]
-
-    def __str__(self):
-        return f"{self.alternative_letter}) {self.alternative_text[:50]}"
-
-
 class TbQuestionCompetency(models.Model):
     id_question = models.ForeignKey(TbQuestions, on_delete=models.CASCADE, db_column='id_question')
     id_competency = models.ForeignKey(TbCompetencyIdeb, on_delete=models.CASCADE, db_column='id_competency')
@@ -313,7 +293,38 @@ class TbQuestionCompetency(models.Model):
         verbose_name_plural = 'Questões-Competências'
         unique_together = [['id_question', 'id_competency']]
 
+class TbAlternatives(models.Model):
+    id = models.AutoField(primary_key=True)
+    id_question = models.ForeignKey(
+        'TbQuestions', 
+        on_delete=models.CASCADE, 
+        db_column='id_question'
+    )
+    alternative_order = models.IntegerField()  # ✅ CORRIGIDO
+    alternative_text = models.TextField()
+    is_correct = models.BooleanField(default=False)
+    distractor_type = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        managed = False
+        db_table = 'tb_alternatives'
+        verbose_name = 'Alternativa'
+        verbose_name_plural = 'Alternativas'
+        unique_together = [['id_question', 'alternative_order']]
+        ordering = ['id_question', 'alternative_order']
+
+    def __str__(self):
+        # Converte número para letra (1=A, 2=B, etc)
+        letter = chr(64 + self.alternative_order) if self.alternative_order <= 26 else str(self.alternative_order)
+        return f"{letter}) {self.alternative_text[:50]}"
+    
+    @property
+    def alternative_letter(self):
+        """Propriedade computada para compatibilidade com frontend"""
+        if self.alternative_order and self.alternative_order <= 26:
+            return chr(64 + self.alternative_order)  # 1=A, 2=B, 3=C...
+        return str(self.alternative_order)
 # ============================================
 # MODELOS DE APLICAÇÕES E RESULTADOS
 # ============================================
