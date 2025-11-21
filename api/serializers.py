@@ -209,7 +209,22 @@ class TbAlternativesSerializer(serializers.ModelSerializer):
             return letters[obj.alternative_order - 1]
         return str(obj.alternative_order)
 
+class TbAlternativesCreateSerializer(serializers.ModelSerializer):
 
+    """Serializer para criação de alternativas (apenas campos necessários)"""
+
+    class Meta:
+
+        model = TbAlternatives
+
+        fields = ['alternative_order', 'alternative_text', 'is_correct', 'distractor_type']
+
+        extra_kwargs = {
+
+            'distractor_type': {'required': False, 'allow_null': True, 'allow_blank': True}
+
+        }
+        
 class TbQuestionsSerializer(serializers.ModelSerializer):
     exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
     descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True, allow_null=True)
@@ -234,7 +249,7 @@ class TbQuestionsSerializer(serializers.ModelSerializer):
 
 class TbQuestionsCreateSerializer(serializers.ModelSerializer):
     """Serializer otimizado para criação de questão com alternativas aninhadas"""
-    alternatives = TbAlternativesSerializer(many=True, required=False)
+    aalternatives = TbAlternativesCreateSerializer(many=True, required=False)
     
     class Meta:
         model = TbQuestions
