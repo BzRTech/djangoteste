@@ -544,6 +544,7 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                 'school_name': (student.id_class.id_school.school
                                if student.id_class and student.id_class.id_school else None),
                 'grade': student.id_class.grade if student.id_class else None,
+                'shift': student.id_class.shift if student.id_class else None,
             }
             
             # Descritores conquistados
