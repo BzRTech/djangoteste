@@ -11,12 +11,14 @@ import {
   CheckCircle,
   Loader2,
   AlertCircle,
+  BookOpen,
   //Eye,
   //AlertCircle,
 } from "lucide-react";
 
 import Loading from "../components/Loading";
 import ResultsTab from "../components/examManagement/ResultsTab";
+import QuestionBankManager from "../components/examManagement/QuestionBankManager";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
@@ -34,6 +36,7 @@ const ExamsManagement = () => {
  // const [selectedExam, setSelectedExam] = useState(null);
   const [examResults, setExamResults] = useState([]);
   const [students, setStudents] = useState([]);
+  const [selectedExamForQuestions, setSelectedExamForQuestions] = useState(null);
 
   // Função helper para buscar TODOS os dados de um endpoint
   const fetchAllData = async (endpoint) => {
@@ -237,7 +240,7 @@ const ExamsManagement = () => {
 
           {/* Tab Content */}
           <div className="p-6">
-            {activeTab === "exams" && (
+            {activeTab === "exams" && !selectedExamForQuestions && (
               <ExamsTab
                 exams={exams}
                 subjects={subjects}
@@ -247,8 +250,15 @@ const ExamsManagement = () => {
                   //setSelectedExam(exam);
                   setShowExamForm(true);
                 }}
+                onManageQuestions={(exam) => setSelectedExamForQuestions(exam)}
                 showForm={showExamForm}
                 setShowForm={setShowExamForm}
+              />
+            )}
+            {activeTab === "exams" && selectedExamForQuestions && (
+              <QuestionBankManager
+                examId={selectedExamForQuestions.id}
+                onClose={() => setSelectedExamForQuestions(null)}
               />
             )}
             {activeTab === "applications" && (
@@ -302,7 +312,7 @@ const StatCard = ({ title, value, icon: Icon, color }) => {
 // ============================================
 // EXAMS TAB
 // ============================================
-const ExamsTab = ({ exams, subjects, onRefresh, onDelete, onEdit, showForm, setShowForm }) => {
+const ExamsTab = ({ exams, subjects, onRefresh, onDelete, onEdit, showForm, setShowForm, onManageQuestions }) => {
   const handleNewExam = () => {
     onEdit(null);
   };
@@ -349,7 +359,7 @@ const ExamsTab = ({ exams, subjects, onRefresh, onDelete, onEdit, showForm, setS
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Questões
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                       Ações
                     </th>
                   </tr>
@@ -372,19 +382,30 @@ const ExamsTab = ({ exams, subjects, onRefresh, onDelete, onEdit, showForm, setS
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {exam.total_questions || 0}
                       </td>
-                      <td className="px-6 py-4 text-sm text-right">
-                        <button
-                          onClick={() => onEdit(exam)}
-                          className="text-blue-600 hover:text-blue-800 mr-3"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(exam.id, "exam")}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => onManageQuestions(exam)}
+                            className="text-green-600 hover:text-green-800"
+                            title="Gerenciar Questões"
+                          >
+                            <BookOpen className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onEdit(exam)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Editar"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onDelete(exam.id, "exam")}
+                            className="text-red-600 hover:text-red-800"
+                            title="Deletar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
