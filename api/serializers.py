@@ -64,7 +64,6 @@ class TbTeacherSubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbTeacherSubject
         fields = ['id', 'id_teacher', 'id_subject', 'subject_name', 'created_at']
->>>>>>> 34eb5207ca00212ce84f9cde7c917684ebcd85f0
 
 
 class TbTeacherSerializer(serializers.ModelSerializer):
@@ -198,9 +197,6 @@ class TbClassIdebIndicatorsSerializer(serializers.ModelSerializer):
 # ============================================
 # 4. DEFINIÇÃO DE PROVAS E QUESTÕES
 # ============================================
-
-<<<<<<< HEAD
-=======
 class TbCompetencyIdebSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbCompetencyIdeb
@@ -226,8 +222,6 @@ class TbExamsSerializer(serializers.ModelSerializer):
             'total_questions': {'required': False, 'allow_null': True},
         }
 
-
->>>>>>> 34eb5207ca00212ce84f9cde7c917684ebcd85f0
 class TbAlternativesSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbAlternatives
