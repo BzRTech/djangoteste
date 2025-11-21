@@ -394,8 +394,14 @@ const QuestionForm = ({ examId, question, descriptors, onSave, onCancel }) => {
     try {
       // 1. Criar/atualizar questão
       const questionData = {
-        ...formData,
+        id_exam: formData.id_exam,
+        question_number: parseInt(formData.question_number),
+        question_text: formData.question_text.trim(),
+        question_type: formData.question_type,
+        difficulty_level: formData.difficulty_level,
+        points: parseFloat(formData.points),
         id_descriptor: formData.id_descriptor || null,
+        skill_assessed: formData.skill_assessed || '',
         alternatives: alternatives.map((alt, index) => ({
           alternative_order: index + 1,  // Converter para número (1, 2, 3, 4)
           alternative_text: alt.alternative_text.trim(),
