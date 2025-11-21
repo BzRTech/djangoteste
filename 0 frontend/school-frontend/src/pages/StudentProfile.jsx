@@ -28,8 +28,8 @@ const StudentProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/student-profile/${studentId}`);
-      
+      const response = await fetch(`${API_BASE_URL}/student-profile/${studentId}/profile/`);
+
       if (!response.ok) {
         throw new Error(`Erro ao carregar perfil: ${response.status}`);
       }
