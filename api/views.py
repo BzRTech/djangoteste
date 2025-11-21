@@ -490,12 +490,12 @@ class TbStudentDescriptorAchievementsViewSet(viewsets.ModelViewSet):
 class TbStudentLearningProgressViewSet(viewsets.ModelViewSet):
     """Progresso de Aprendizagem dos Alunos"""
     queryset = TbStudentLearningProgress.objects.all().select_related(
-        'id_student', 'id_competency', 'id_exam_application'
+        'id_student', 'id_descriptor', 'id_exam_application'
     )
     serializer_class = TbStudentLearningProgressSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['id_student', 'id_competency', 'id_exam_application']
-    ordering_fields = ['assessment_date', 'competency_mastery']
+    filterset_fields = ['id_student', 'id_descriptor', 'id_exam_application']
+    ordering_fields = ['assessment_date', 'descriptor_mastery']
 
     @action(detail=False, methods=['get'])
     def by_student(self, request):
@@ -503,7 +503,7 @@ class TbStudentLearningProgressViewSet(viewsets.ModelViewSet):
         student_id = request.query_params.get('student_id')
         if not student_id:
             return Response({'error': 'student_id is required'}, status=400)
-        
+
         progress = self.queryset.filter(id_student=student_id).order_by('-assessment_date')
         serializer = self.get_serializer(progress, many=True)
         return Response(serializer.data)
@@ -512,7 +512,7 @@ class TbStudentLearningProgressViewSet(viewsets.ModelViewSet):
     def low_performance(self, request):
         """Retorna alunos com baixo desempenho (< 50%)"""
         threshold = request.query_params.get('threshold', 50)
-        progress = self.queryset.filter(competency_mastery__lt=threshold)
+        progress = self.queryset.filter(descriptor_mastery__lt=threshold)
         serializer = self.get_serializer(progress, many=True)
         return Response(serializer.data)
     
@@ -598,13 +598,14 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
             # Estatísticas de progresso
             learning_progress = TbStudentLearningProgress.objects.filter(
                 id_student=student
-            ).select_related('id_competency').order_by('-assessment_date')[:5]
-            
+            ).select_related('id_descriptor').order_by('-assessment_date')[:5]
+
             recent_progress = []
             for progress in learning_progress:
                 recent_progress.append({
-                    'competency_name': progress.id_competency.competency_name,
-                    'competency_mastery': float(progress.competency_mastery),
+                    'descriptor_name': progress.id_descriptor.descriptor_name,
+                    'descriptor_code': progress.id_descriptor.descriptor_code,
+                    'descriptor_mastery': float(progress.descriptor_mastery),
                     'assessment_date': progress.assessment_date,
                     'score': float(progress.score),
                     'max_score': float(progress.max_score),

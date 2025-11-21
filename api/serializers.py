@@ -42,35 +42,12 @@ class TbSchoolSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TbSchool
-<<<<<<< HEAD
-        fields = [
-            'id', 'school', 'director_name', 'id_city', 
-            'city_name', 'state', 'address', 'created_at'
-        ]
-=======
         fields = ['id', 'school', 'director_name', 'id_city', 'city_name', 'state', 'address', 'created_at']
         extra_kwargs = {
             'id_city': {'required': False, 'allow_null': True},
             'director_name': {'required': False, 'allow_blank': True, 'allow_null': True},
             'address': {'required': False, 'allow_blank': True, 'allow_null': True},
         }
-
-
-class TbSubjectSerializer(serializers.ModelSerializer):
-    """Serializer para disciplinas"""
-    class Meta:
-        model = TbSubject
-        fields = '__all__'
-
-
-class TbTeacherSubjectSerializer(serializers.ModelSerializer):
-    """Serializer para a tabela intermediária"""
-    subject_name = serializers.CharField(source='id_subject.subject_name', read_only=True)
-    
-    class Meta:
-        model = TbTeacherSubject
-        fields = ['id', 'id_teacher', 'id_subject', 'subject_name', 'created_at']
->>>>>>> 34eb5207ca00212ce84f9cde7c917684ebcd85f0
 
 
 class TbTeacherSerializer(serializers.ModelSerializer):
@@ -205,35 +182,6 @@ class TbClassIdebIndicatorsSerializer(serializers.ModelSerializer):
 # 4. DEFINIÇÃO DE PROVAS E QUESTÕES
 # ============================================
 
-<<<<<<< HEAD
-=======
-class TbCompetencyIdebSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbCompetencyIdeb
-        fields = '__all__'
-
-
-class TbDescriptorsCatalogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbDescriptorsCatalog
-        fields = '__all__'
-
-
-# ============================================
-# SERIALIZERS DE EXAMES E QUESTÕES
-# ============================================
-
-class TbExamsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TbExams
-        fields = '__all__'
-        extra_kwargs = {
-            'description': {'required': False, 'allow_blank': True, 'allow_null': True},
-            'total_questions': {'required': False, 'allow_null': True},
-        }
-
-
->>>>>>> 34eb5207ca00212ce84f9cde7c917684ebcd85f0
 class TbAlternativesSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbAlternatives
@@ -432,7 +380,7 @@ class TbExamResultsSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'id_student', 'student_name', 'id_exam_application',
             'exam_name', 'total_score', 'max_score', 'correct_answers',
-            'wrong_answers', 'blank_answers', 'completion_time_minutes',
+            'wrong_answers', 'blank_answers', 'started_at', 'finished_at',
             'created_at'
         ]
         extra_kwargs = {
@@ -441,7 +389,6 @@ class TbExamResultsSerializer(serializers.ModelSerializer):
             'correct_answers': {'required': False, 'allow_null': True},
             'wrong_answers': {'required': False, 'allow_null': True},
             'blank_answers': {'required': False, 'allow_null': True},
-            'completion_time_minutes': {'required': False, 'allow_null': True},
             'started_at': {'required': False, 'allow_null': True},
             'finished_at': {'required': False, 'allow_null': True},
         }
@@ -454,16 +401,16 @@ class TbExamResultsDetailSerializer(serializers.ModelSerializer):
     class_name = serializers.CharField(source='id_student.id_class.class_name', read_only=True)
     exam_name = serializers.CharField(source='id_exam_application.id_exam.exam_name', read_only=True)
     percentage = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = TbExamResults
         fields = [
             'id', 'id_student', 'student_name', 'student_serial', 'class_name',
             'id_exam_application', 'exam_name', 'total_score', 'max_score',
             'percentage', 'correct_answers', 'wrong_answers', 'blank_answers',
-            'completion_time_minutes', 'started_at', 'finished_at', 'created_at'
+            'started_at', 'finished_at', 'created_at'
         ]
-    
+
     def get_percentage(self, obj):
         if obj.max_score and obj.max_score > 0:
             return round((obj.total_score / obj.max_score) * 100, 2)
