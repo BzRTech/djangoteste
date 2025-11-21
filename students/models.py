@@ -401,7 +401,7 @@ class TbExamResults(models.Model):
     correct_answers = models.IntegerField(blank=True, null=True)
     wrong_answers = models.IntegerField(blank=True, null=True)
     blank_answers = models.IntegerField(blank=True, null=True)
-    completion_time_minutes = models.IntegerField(blank=True, null=True)
+    # completion_time_minutes = models.IntegerField(blank=True, null=True)
     started_at = models.DateTimeField(blank=True, null=True)
     finished_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

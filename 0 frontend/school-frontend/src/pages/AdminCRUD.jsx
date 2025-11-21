@@ -350,6 +350,7 @@ const ClassesTable = ({ data, onEdit, onDelete }) => (
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Escola</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Série</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ano</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Turno</th>
           <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
         </tr>
       </thead>
@@ -361,6 +362,7 @@ const ClassesTable = ({ data, onEdit, onDelete }) => (
             <td className="px-6 py-4 text-sm text-gray-600">{cls.school_name || '-'}</td>
             <td className="px-6 py-4 text-sm text-gray-600">{cls.grade || '-'}</td>
             <td className="px-6 py-4 text-sm text-gray-600">{cls.school_year}</td>
+            <td className="px-6 py-4 text-sm text-gray-600">{cls.shift}</td>
             <td className="px-6 py-4 text-sm text-right">
               <button onClick={() => onEdit(cls)} className="text-gray-600 hover:text-gray-800 mr-3">
                 <Edit2 className="w-4 h-4" />
