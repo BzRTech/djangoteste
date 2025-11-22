@@ -8,7 +8,13 @@
 
 ## 🔧 Backend (Django)
 
-### 1. Instalar Dependências
+### 1. Navegar para a pasta do backend
+
+```bash
+cd backend
+```
+
+### 2. Instalar Dependências
 
 ```bash
 pip install django
@@ -25,9 +31,9 @@ Ou use o requirements.txt:
 pip install -r requirements.txt
 ```
 
-### 2. Configurar Banco de Dados
+### 3. Configurar Banco de Dados
 
-Crie um arquivo `.env` na raiz do projeto:
+Crie um arquivo `.env` na pasta `backend/`:
 
 ```env
 DB_NAME=seu_banco
@@ -37,19 +43,19 @@ DB_HOST=localhost
 DB_PORT=5432
 ```
 
-### 3. Aplicar Migrações (se necessário)
+### 4. Aplicar Migrações (se necessário)
 
 ```bash
 python manage.py migrate
 ```
 
-### 4. Criar Superusuário (opcional)
+### 5. Criar Superusuário (opcional)
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 5. Iniciar Servidor
+### 6. Iniciar Servidor
 
 ```bash
 python manage.py runserver
@@ -61,25 +67,29 @@ O servidor estará rodando em: `http://127.0.0.1:8000`
 
 ## 🎨 Frontend (React)
 
-### 1. Instalar Dependências
+### 1. Navegar para a pasta do frontend
 
 ```bash
-cd "0 frontend/school-frontend"
+cd frontend
+```
+
+### 2. Instalar Dependências
+
+```bash
 npm install
 ```
 
-### 2. Criar Estrutura de Pastas
+### 3. Configurar Variáveis de Ambiente
 
-```bash
-cd src
-mkdir pages
-mkdir components/dashboard
-mkdir components/descriptors
+Crie um arquivo `.env` na pasta `frontend/` baseado no `.env.example`:
+
+```env
+REACT_APP_API_BASE_URL=http://127.0.0.1:8000/api
 ```
 
-### 3. Copiar Arquivos
+### 4. Estrutura de Pastas (já criada)
 
-Copie todos os arquivos fornecidos para suas respectivas pastas:
+A estrutura já está criada conforme abaixo:
 
 **src/**
 - `App.jsx` (substituir o existente)
@@ -101,7 +111,7 @@ Copie todos os arquivos fornecidos para suas respectivas pastas:
 - `DescriptorFilters.jsx`
 - `DescriptorList.jsx`
 
-### 4. Iniciar Frontend
+### 5. Iniciar Frontend
 
 ```bash
 npm start
@@ -264,18 +274,20 @@ admin.site.register(TbDistractorCatalog)
 ## 📝 Comandos Úteis
 
 ```bash
-# Backend
+# Backend (executar na pasta backend/)
+cd backend
 python manage.py runserver
 python manage.py makemigrations
 python manage.py migrate
 python manage.py createsuperuser
 
-# Frontend
+# Frontend (executar na pasta frontend/)
+cd frontend
 npm start
 npm run build
 npm test
 
-# Git
+# Git (executar na raiz do projeto)
 git status
 git add .
 git commit -m "mensagem"

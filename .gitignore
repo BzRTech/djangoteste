@@ -15,6 +15,23 @@ db.sqlite3-journal
 media/
 staticfiles/
 
+# Backend
+backend/.env
+backend/venv/
+backend/staticfiles/
+backend/media/
+
+# Frontend
+frontend/node_modules/
+frontend/build/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
 # Env
 .env
 .env.local
@@ -28,4 +45,3 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
-EOF
