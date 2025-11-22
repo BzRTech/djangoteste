@@ -49,7 +49,7 @@ const StudentProfile = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `${API_BASE_URL}/student-profile/${studentId}`
+          `${API_BASE_URL}/student-profile/${studentId}/profile/`
         );
 
         if (!response.ok) {
@@ -74,7 +74,7 @@ const StudentProfile = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${API_BASE_URL}/student-profile/${studentId}`
+        `${API_BASE_URL}/student-profile/${studentId}/profile/`
       );
 
       if (!response.ok) {
