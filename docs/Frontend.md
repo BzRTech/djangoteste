@@ -3,7 +3,7 @@
 ## 🗂️ Nova Estrutura de Pastas
 
 ```
-src/
+frontend/src/
 ├── App.jsx                          # Router principal
 ├── index.js                         # Entry point
 ├── index.css                        # Estilos globais
@@ -31,7 +31,7 @@ src/
 ### 1. Criar a estrutura de pastas
 
 ```bash
-cd src
+cd frontend/src
 mkdir pages
 mkdir components/dashboard
 mkdir components/descriptors
