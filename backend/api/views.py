@@ -349,70 +349,78 @@ class TbStudentAnswersViewSet(viewsets.ModelViewSet):
     def bulk_create(self, request):
         """Lançamento em lote de respostas"""
         serializer = BulkStudentAnswersSerializer(data=request.data)
-        
+
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         validated_data = serializer.validated_data
         id_student = validated_data['id_student']
         id_exam_application = validated_data['id_exam_application']
         answers = validated_data['answers']
-        
-        created_answers = []
-        
-        with transaction.atomic():
-            for answer in answers:
-                # Verificar se a resposta está correta
-                try:
-                    question = TbQuestions.objects.get(id=answer['id_question'])
-                    selected_alt_id = answer.get('id_selected_alternative')
 
-                    # Verificar se a resposta está correta comparando IDs
-                    is_correct = False
-                    if selected_alt_id:
-                        # Tentar comparar por ID primeiro
-                        if question.correct_answer:
-                            try:
-                                is_correct = int(selected_alt_id) == int(question.correct_answer)
-                            except (ValueError, TypeError):
-                                # Se correct_answer não for um número, buscar pela alternativa correta
-                                correct_alt = TbAlternatives.objects.filter(
-                                    id_question=question,
-                                    is_correct=True
-                                ).first()
-                                if correct_alt:
-                                    is_correct = int(selected_alt_id) == correct_alt.id
-                        else:
-                            # Se correct_answer for None, buscar pela alternativa marcada como correta
+        # Verificar se o aluno já fez esta prova
+        existing_answers = TbStudentAnswers.objects.filter(
+            id_student_id=id_student,
+            id_exam_application_id=id_exam_application
+        ).exists()
+
+        if existing_answers:
+            return Response({
+                'error': 'Este aluno já realizou esta prova'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        created_answers = []
+        errors = []
+
+        try:
+            with transaction.atomic():
+                for answer in answers:
+                    try:
+                        question = TbQuestions.objects.get(id=answer['id_question'])
+                        selected_alt_id = answer.get('id_selected_alternative')
+
+                        # Verificar se a resposta está correta
+                        is_correct = False
+                        if selected_alt_id:
+                            # Buscar pela alternativa marcada como correta
                             correct_alt = TbAlternatives.objects.filter(
                                 id_question=question,
                                 is_correct=True
                             ).first()
+
                             if correct_alt:
                                 is_correct = int(selected_alt_id) == correct_alt.id
 
-                    student_answer = TbStudentAnswers.objects.create(
-                        id_student_id=id_student,
-                        id_exam_application_id=id_exam_application,
-                        id_question_id=answer['id_question'],
-                        id_selected_alternative_id=selected_alt_id,
-                        answer_text=answer.get('answer_text', ''),
-                        is_correct=is_correct
-                    )
-                    created_answers.append(student_answer)
-                except TbQuestions.DoesNotExist:
-                    continue
-                except Exception as e:
-                    # Log do erro mas continua processando outras respostas
-                    print(f"Erro ao processar resposta da questão {answer.get('id_question')}: {str(e)}")
-                    continue
-            
-            # Calcular e criar resultado automático
-            self._calculate_exam_result(id_student, id_exam_application)
-        
+                        student_answer = TbStudentAnswers.objects.create(
+                            id_student_id=id_student,
+                            id_exam_application_id=id_exam_application,
+                            id_question_id=answer['id_question'],
+                            id_selected_alternative_id=selected_alt_id,
+                            answer_text=answer.get('answer_text', ''),
+                            is_correct=is_correct
+                        )
+                        created_answers.append(student_answer)
+                    except TbQuestions.DoesNotExist:
+                        errors.append(f"Questão {answer.get('id_question')} não encontrada")
+                        continue
+                    except Exception as e:
+                        errors.append(f"Erro na questão {answer.get('id_question')}: {str(e)}")
+                        continue
+
+                # Calcular e criar resultado automático
+                if created_answers:
+                    self._calculate_exam_result(id_student, id_exam_application)
+
+        except Exception as e:
+            return Response({
+                'error': f'Erro ao processar respostas: {str(e)}',
+                'details': errors
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         return Response({
             'message': 'Respostas registradas com sucesso',
-            'total_answers': len(created_answers)
+            'total_answers': len(created_answers),
+            'errors': errors if errors else None
         }, status=status.HTTP_201_CREATED)
     
     def _calculate_exam_result(self, id_student, id_exam_application):
