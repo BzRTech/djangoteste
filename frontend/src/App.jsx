@@ -12,6 +12,7 @@ import AdminCRUD from "./pages/AdminCRUD";
 import ExamsManagement from "./pages/ExamsManagement";
 import StudentProfile from "./pages/StudentProfile";
 import StudentAnswers from "./pages/StudentAnswers";
+import TakeExam from "./pages/TakeExam";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="exams" element={<ExamsManagement />} />
           <Route path="student/:id" element={<StudentProfile />} />
           <Route path="student-answers" element={<StudentAnswers />} />
+          <Route path="take-exam" element={<TakeExam />} />
         </Route>
       </Routes>
     </Router>
