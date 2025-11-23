@@ -11,7 +11,8 @@ const Layout = () => {
     { to: "/admin", label: "Administração" },
     { to: "/exams", label: "Provas" },
     { to: "/student-answers", label: "Respostas dos Alunos" },
-    { to: "/student/1", label: "Perfil do Aluno" }
+    { to: "/student/1", label: "Perfil do Aluno" },
+    { to: "/take-exam/", label: "Prova" },
   ];
 
   return (
@@ -24,9 +25,7 @@ const Layout = () => {
             <div className="flex items-center">
               <Link to="/dashboard" className="flex items-center gap-2">
                 <ImageOffIcon className="w-10 h-10 text-gray-600" />
-                <span className="text-4xl font-bold text-gray-800">
-                  IDEB+
-                </span>
+                <span className="text-4xl font-bold text-gray-800">IDEB+</span>
               </Link>
             </div>
 
