@@ -634,6 +634,10 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
 
             recent_progress = []
             for progress in learning_progress:
+                # Verificar se descritor existe
+                if not progress.id_descriptor:
+                    continue
+
                 recent_progress.append({
                     'descriptor_name': progress.id_descriptor.descriptor_name,
                     'descriptor_code': progress.id_descriptor.descriptor_code,
@@ -647,9 +651,13 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
             exam_results = TbExamResults.objects.filter(
                 id_student=student
             ).select_related('id_exam_application__id_exam').order_by('-created_at')[:5]
-            
+
             recent_exams = []
             for result in exam_results:
+                # Verificar se objetos relacionados existem
+                if not result.id_exam_application or not result.id_exam_application.id_exam:
+                    continue
+
                 recent_exams.append({
                     'exam_name': result.id_exam_application.id_exam.exam_name,
                     'total_score': float(result.total_score) if result.total_score else 0,
