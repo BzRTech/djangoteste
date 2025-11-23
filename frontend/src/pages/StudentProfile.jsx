@@ -31,6 +31,8 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import Loading from "../components/Loading";
+import StatCard from "../components/studentProfile/StatCard";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
@@ -74,7 +76,7 @@ const StudentProfile = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${API_BASE_URL}/student-profile/${studentId}/profile/`
+        `${API_BASE_URL}/student-profile/${studentId}`
       );
 
       if (!response.ok) {
@@ -93,16 +95,7 @@ const StudentProfile = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 text-lg">
-            Carregando perfil do aluno...
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (error) {
@@ -219,11 +212,11 @@ const StudentProfile = () => {
                     <Clock className="w-5 h-5" />
                     <span>
                       Turno:{" "}
-                      {profile.shift === "morning"
+                      {profile.shift === "Manhã"
                         ? "Matutino"
-                        : profile.shift === "afternoon"
+                        : profile.shift === "Tarde"
                         ? "Vespertino"
-                        : profile.shift === "night"
+                        : profile.shift === "Noite"
                         ? "Noturno"
                         : profile.shift || "Não informado"}
                     </span>
@@ -328,31 +321,7 @@ const StudentProfile = () => {
 };
 
 // Componentes auxiliares
-const StatCard = ({ title, value, total, icon: Icon, color }) => {
-  const colors = {
-    blue: { bg: "bg-blue-100", text: "text-blue-600" },
-    green: { bg: "bg-green-100", text: "text-green-600" },
-    purple: { bg: "bg-purple-100", text: "text-purple-600" },
-    orange: { bg: "bg-orange-100", text: "text-orange-600" },
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-500 text-sm font-medium">{title}</p>
-          <p className={`text-3xl font-bold ${colors[color].text} mt-2`}>
-            {value}
-          </p>
-          {total && <p className="text-sm text-gray-500 mt-1">de {total}</p>}
-        </div>
-        <div className={`${colors[color].bg} p-4 rounded-full`}>
-          <Icon className={`w-8 h-8 ${colors[color].text}`} />
-        </div>
-      </div>
-    </div>
-  );
-};
+<StatCard />;
 
 const TabButton = ({ active, onClick, icon: Icon, label }) => (
   <button
