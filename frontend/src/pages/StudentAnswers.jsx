@@ -117,7 +117,7 @@ const StudentAnswers = () => {
 
   // Obter dados do aluno
   const getStudent = (studentId) => {
-    return students.find((s) => s.id === studentId) || {};
+    return students.find((s) => s.id_student === studentId) || {};
   };
 
   // Obter dados da questão
@@ -206,7 +206,7 @@ const StudentAnswers = () => {
     if (filterStudent) {
       filteredIds = filteredIds.filter((id) => {
         const student = getStudent(parseInt(id));
-        return student.name?.toLowerCase().includes(filterStudent.toLowerCase());
+        return student.student_name?.toLowerCase().includes(filterStudent.toLowerCase());
       });
     }
 
@@ -239,12 +239,12 @@ const StudentAnswers = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 flex-1">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                    {student.name?.charAt(0) || "?"}
+                    {student.student_name?.charAt(0) || "?"}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-gray-800">{student.name || "Aluno"}</h4>
+                    <h4 className="font-semibold text-gray-800">{student.student_name || "Aluno"}</h4>
                     <p className="text-sm text-gray-500">
-                      Matrícula: {student.serial_number || "N/A"}
+                      Matrícula: {student.student_serial || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -306,11 +306,11 @@ const StudentAnswers = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-2xl backdrop-blur-sm">
-                {student.name?.charAt(0) || "?"}
+                {student.student_name?.charAt(0) || "?"}
               </div>
               <div>
-                <h2 className="text-2xl font-bold">{student.name || "Aluno"}</h2>
-                <p className="text-blue-100">Matrícula: {student.serial_number || "N/A"}</p>
+                <h2 className="text-2xl font-bold">{student.student_name || "Aluno"}</h2>
+                <p className="text-blue-100">Matrícula: {student.student_serial || "N/A"}</p>
               </div>
             </div>
             <div className="text-right">
