@@ -556,7 +556,146 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     )
     serializer_class = TbStudentsSerializer
     lookup_field = 'id_student'  # ✅ Importante: usar id_student como lookup
-    
+
+    @action(detail=True, methods=['get'])
+    def demo_foreignkeys(self, request, id_student=None):
+        """
+        🎓 ENDPOINT DE DEMONSTRAÇÃO - Como acessar ForeignKeys
+
+        Este endpoint mostra de forma didática como acessar campos
+        relacionados através de ForeignKeys em diferentes níveis.
+
+        Exemplo de uso: GET /api/student-profile/{id_student}/demo_foreignkeys/
+        """
+        try:
+            student = self.get_object()
+
+            # ============================================
+            # NÍVEL 1: Acessando ForeignKey direta (id_class)
+            # ============================================
+
+            # ❌ SEM VERIFICAÇÃO (pode dar erro!)
+            # class_name = student.id_class.class_name  # AttributeError se id_class for None
+
+            # ✅ COM VERIFICAÇÃO (seguro)
+            class_name = student.id_class.class_name if student.id_class else "Sem turma"
+            class_grade = student.id_class.grade if student.id_class else "N/A"
+            class_shift = student.id_class.shift if student.id_class else "N/A"
+
+            # ============================================
+            # NÍVEL 2: Acessando ForeignKey de ForeignKey (id_class → id_school)
+            # ============================================
+
+            # ❌ SEM VERIFICAÇÃO (pode dar erro!)
+            # school_name = student.id_class.id_school.school  # Erro se qualquer um for None
+
+            # ✅ COM VERIFICAÇÃO (seguro) - Verifica CADA nível
+            school_name = None
+            school_address = None
+            director_name = None
+
+            if student.id_class:  # Primeiro verifica se tem turma
+                if student.id_class.id_school:  # Depois verifica se a turma tem escola
+                    school_name = student.id_class.id_school.school
+                    school_address = student.id_class.id_school.address
+                    director_name = student.id_class.id_school.director_name
+
+            # ✅ FORMA COMPACTA (mesma coisa, mais curta)
+            school_name_compact = (student.id_class.id_school.school
+                                  if student.id_class and student.id_class.id_school
+                                  else "Escola não informada")
+
+            # ============================================
+            # NÍVEL 3: Indo mais fundo (id_class → id_school → id_city)
+            # ============================================
+
+            city_name = None
+            state = None
+
+            if student.id_class:
+                if student.id_class.id_school:
+                    if student.id_class.id_school.id_city:
+                        city_name = student.id_class.id_school.id_city.city
+                        state = student.id_class.id_school.id_city.state
+
+            # ✅ FORMA COMPACTA para cidade
+            city_info = (f"{student.id_class.id_school.id_city.city} - {student.id_class.id_school.id_city.state}"
+                        if student.id_class and student.id_class.id_school and student.id_class.id_school.id_city
+                        else "Cidade não informada")
+
+            # ============================================
+            # NÍVEL 4: Acessando o Professor da Turma (id_class → id_teacher)
+            # ============================================
+
+            teacher_name = None
+            teacher_serial = None
+
+            if student.id_class and student.id_class.id_teacher:
+                teacher_name = student.id_class.id_teacher.teacher_name
+                teacher_serial = student.id_class.id_teacher.teacher_serial
+
+            # ============================================
+            # RETORNO DIDÁTICO
+            # ============================================
+
+            return Response({
+                'mensagem': '🎓 Demonstração de acesso a ForeignKeys',
+                'aluno': {
+                    'id': student.id_student,
+                    'nome': student.student_name,
+                    'matricula': student.student_serial,
+                },
+
+                # NÍVEL 1: Turma (ForeignKey direta)
+                'nivel_1_turma': {
+                    'nome_turma': class_name,
+                    'serie': class_grade,
+                    'turno': class_shift,
+                    'explicacao': 'Acessado via: student.id_class.class_name'
+                },
+
+                # NÍVEL 2: Escola (ForeignKey de ForeignKey)
+                'nivel_2_escola': {
+                    'nome_escola': school_name or "Não informado",
+                    'endereco': school_address or "Não informado",
+                    'diretor': director_name or "Não informado",
+                    'explicacao': 'Acessado via: student.id_class.id_school.school'
+                },
+
+                # NÍVEL 3: Cidade (ForeignKey de ForeignKey de ForeignKey)
+                'nivel_3_cidade': {
+                    'cidade': city_name or "Não informado",
+                    'estado': state or "Não informado",
+                    'cidade_completa': city_info,
+                    'explicacao': 'Acessado via: student.id_class.id_school.id_city.city'
+                },
+
+                # NÍVEL 4: Professor da Turma
+                'nivel_4_professor': {
+                    'nome_professor': teacher_name or "Não informado",
+                    'matricula_professor': teacher_serial or "Não informado",
+                    'explicacao': 'Acessado via: student.id_class.id_teacher.teacher_name'
+                },
+
+                'dicas_importantes': {
+                    '1_select_related': 'Use select_related() no queryset para otimizar (já está usando nesta view!)',
+                    '2_verificacao_none': 'Sempre verifique se cada nível existe antes de acessar o próximo',
+                    '3_performance': 'Com select_related(), tudo isso foi puxado em UMA única query SQL!',
+                    '4_sem_select_related': 'Sem select_related(), cada acesso faria uma query separada (N+1 problem)'
+                },
+
+                'comparacao_queries': {
+                    'com_select_related': '1 query (otimizado) ✅',
+                    'sem_select_related': f'{1 + (1 if student.id_class else 0) + (1 if student.id_class and student.id_class.id_school else 0)} queries ❌',
+                    'explicacao': 'O select_related faz JOINs no SQL, trazendo tudo de uma vez'
+                }
+            })
+
+        except TbStudents.DoesNotExist:
+            return Response({'error': 'Aluno não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['get'])
     def profile(self, request, id_student=None):
         """Retorna perfil completo do aluno"""
