@@ -369,8 +369,27 @@ class TbStudentAnswersViewSet(viewsets.ModelViewSet):
 
                     # Verificar se a resposta está correta comparando IDs
                     is_correct = False
-                    if selected_alt_id and question.correct_answer:
-                        is_correct = int(selected_alt_id) == int(question.correct_answer)
+                    if selected_alt_id:
+                        # Tentar comparar por ID primeiro
+                        if question.correct_answer:
+                            try:
+                                is_correct = int(selected_alt_id) == int(question.correct_answer)
+                            except (ValueError, TypeError):
+                                # Se correct_answer não for um número, buscar pela alternativa correta
+                                correct_alt = TbAlternatives.objects.filter(
+                                    id_question=question,
+                                    is_correct=True
+                                ).first()
+                                if correct_alt:
+                                    is_correct = int(selected_alt_id) == correct_alt.id
+                        else:
+                            # Se correct_answer for None, buscar pela alternativa marcada como correta
+                            correct_alt = TbAlternatives.objects.filter(
+                                id_question=question,
+                                is_correct=True
+                            ).first()
+                            if correct_alt:
+                                is_correct = int(selected_alt_id) == correct_alt.id
 
                     student_answer = TbStudentAnswers.objects.create(
                         id_student_id=id_student,
@@ -382,6 +401,10 @@ class TbStudentAnswersViewSet(viewsets.ModelViewSet):
                     )
                     created_answers.append(student_answer)
                 except TbQuestions.DoesNotExist:
+                    continue
+                except Exception as e:
+                    # Log do erro mas continua processando outras respostas
+                    print(f"Erro ao processar resposta da questão {answer.get('id_question')}: {str(e)}")
                     continue
             
             # Calcular e criar resultado automático

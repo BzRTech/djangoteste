@@ -40,7 +40,7 @@ const StudentAnswers = () => {
         const response = await fetch(`${API_BASE_URL}/exam-applications/`);
         if (!response.ok) throw new Error("Erro ao carregar aplicações");
         const data = await response.json();
-        setExamApplications(data);
+        setExamApplications(Array.isArray(data) ? data : data.results || []);
         setError(null);
       } catch (err) {
         console.error("Erro:", err);
@@ -67,7 +67,7 @@ const StudentAnswers = () => {
         );
         if (!answersResponse.ok) throw new Error("Erro ao carregar respostas");
         const answersData = await answersResponse.json();
-        setStudentAnswers(answersData);
+        setStudentAnswers(Array.isArray(answersData) ? answersData : answersData.results || []);
 
         // Carregar questões da prova
         const questionsResponse = await fetch(
@@ -75,19 +75,19 @@ const StudentAnswers = () => {
         );
         if (!questionsResponse.ok) throw new Error("Erro ao carregar questões");
         const questionsData = await questionsResponse.json();
-        setQuestions(questionsData);
+        setQuestions(Array.isArray(questionsData) ? questionsData : questionsData.results || []);
 
         // Carregar alunos
         const studentsResponse = await fetch(`${API_BASE_URL}/students/`);
         if (!studentsResponse.ok) throw new Error("Erro ao carregar alunos");
         const studentsData = await studentsResponse.json();
-        setStudents(studentsData);
+        setStudents(Array.isArray(studentsData) ? studentsData : studentsData.results || []);
 
         // Carregar descritores
         const descriptorsResponse = await fetch(`${API_BASE_URL}/descriptors/`);
         if (!descriptorsResponse.ok) throw new Error("Erro ao carregar descritores");
         const descriptorsData = await descriptorsResponse.json();
-        setDescriptors(descriptorsData);
+        setDescriptors(Array.isArray(descriptorsData) ? descriptorsData : descriptorsData.results || []);
 
         setError(null);
       } catch (err) {
