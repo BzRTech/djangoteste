@@ -6,7 +6,6 @@ import {
   Calendar,
   Target,
   TrendingUp,
-  Award,
   ChevronLeft,
   CheckCircle,
   XCircle,
@@ -33,7 +32,8 @@ import {
   Legend,
 } from "recharts";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
 
 const StudentProfile = () => {
   // Pega ID do aluno da URL (simulado aqui, no React Router seria useParams)
@@ -49,7 +49,7 @@ const StudentProfile = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `${API_BASE_URL}/student-profile/${studentId}/profile/`
+          `${API_BASE_URL}/student-profile/${studentId}`
         );
 
         if (!response.ok) {
@@ -151,21 +151,29 @@ const StudentProfile = () => {
   }
 
   // Preparação dos dados para gráficos
-  const competencyRadarData = Array.isArray(profile.recent_progress) && profile.recent_progress.length > 0
-    ? profile.recent_progress.slice(0, 6).map((p) => ({
-        competency: p.descriptor_name?.substring(0, 15) + "..." || "N/A",
-        mastery: p.descriptor_mastery || 0,
-      }))
-    : [];
+  const competencyRadarData =
+    Array.isArray(profile.recent_progress) && profile.recent_progress.length > 0
+      ? profile.recent_progress.slice(0, 6).map((p) => ({
+          competency: p.descriptor_name?.substring(0, 15) + "..." || "N/A",
+          mastery: p.descriptor_mastery || 0,
+        }))
+      : [];
 
-  const descriptorsBySubjectData = profile.descriptors?.by_subject && typeof profile.descriptors.by_subject === 'object'
-    ? Object.entries(profile.descriptors.by_subject).map(([subject, data]) => ({
-        subject,
-        conquistados: data.achieved || 0,
-        total: data.total || 0,
-        percentual: data.total > 0 ? Math.round((data.achieved / data.total) * 100) : 0,
-      }))
-    : [];
+  const descriptorsBySubjectData =
+    profile.descriptors?.by_subject &&
+    typeof profile.descriptors.by_subject === "object"
+      ? Object.entries(profile.descriptors.by_subject).map(
+          ([subject, data]) => ({
+            subject,
+            conquistados: data.achieved || 0,
+            total: data.total || 0,
+            percentual:
+              data.total > 0
+                ? Math.round((data.achieved / data.total) * 100)
+                : 0,
+          })
+        )
+      : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
@@ -444,7 +452,10 @@ const OverviewTab = ({
 const DescriptorsTab = ({ profile }) => {
   const [selectedSubject, setSelectedSubject] = useState("Todos");
 
-  if (!profile.descriptors?.by_subject || typeof profile.descriptors.by_subject !== 'object') {
+  if (
+    !profile.descriptors?.by_subject ||
+    typeof profile.descriptors.by_subject !== "object"
+  ) {
     return (
       <p className="text-gray-500 text-center py-8">
         Nenhum descritor disponível
@@ -543,31 +554,31 @@ const DescriptorsTab = ({ profile }) => {
                       : "bg-red-50 border-red-300 opacity-70"
                   }`}
                 >
-                <div className="flex items-start justify-between mb-2">
-                  <span className="text-xs font-mono font-bold text-gray-600 bg-white px-2 py-1 rounded">
-                    {desc.code}
-                  </span>
-                  {desc.achieved ? (
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                  ) : (
-                    <XCircle className="w-6 h-6 text-red-400" />
-                  )}
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-xs font-mono font-bold text-gray-600 bg-white px-2 py-1 rounded">
+                      {desc.code}
+                    </span>
+                    {desc.achieved ? (
+                      <CheckCircle className="w-6 h-6 text-green-600" />
+                    ) : (
+                      <XCircle className="w-6 h-6 text-red-400" />
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 line-clamp-3">
+                    {desc.name}
+                  </p>
+                  <div className="mt-2">
+                    <span
+                      className={`text-xs font-semibold px-2 py-1 rounded ${
+                        desc.achieved
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {desc.achieved ? "Conquistado ✓" : "Não conquistado"}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-sm font-medium text-gray-800 line-clamp-3">
-                  {desc.name}
-                </p>
-                <div className="mt-2">
-                  <span
-                    className={`text-xs font-semibold px-2 py-1 rounded ${
-                      desc.achieved
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {desc.achieved ? "Conquistado ✓" : "Não conquistado"}
-                  </span>
-                </div>
-              </div>
               ))
             ) : (
               <p className="text-gray-500 text-center py-4 col-span-full">
@@ -582,7 +593,10 @@ const DescriptorsTab = ({ profile }) => {
 };
 
 const ExamsTab = ({ profile }) => {
-  if (!Array.isArray(profile.recent_exams) || profile.recent_exams.length === 0) {
+  if (
+    !Array.isArray(profile.recent_exams) ||
+    profile.recent_exams.length === 0
+  ) {
     return (
       <div className="text-center py-12">
         <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -691,7 +705,10 @@ const ExamsTab = ({ profile }) => {
 };
 
 const ProgressTab = ({ profile }) => {
-  if (!Array.isArray(profile.recent_progress) || profile.recent_progress.length === 0) {
+  if (
+    !Array.isArray(profile.recent_progress) ||
+    profile.recent_progress.length === 0
+  ) {
     return (
       <div className="text-center py-12">
         <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
