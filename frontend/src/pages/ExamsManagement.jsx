@@ -37,6 +37,7 @@ const ExamsManagement = () => {
   const [students, setStudents] = useState([]);
   const [selectedExamForQuestions, setSelectedExamForQuestions] =
     useState(null);
+  const [editingApplication, setEditingApplication] = useState(null);
 
   // Função helper para buscar TODOS os dados de um endpoint
   const fetchAllData = async (endpoint) => {
@@ -259,6 +260,8 @@ const ExamsManagement = () => {
                 onDelete={handleDelete}
                 showForm={showApplicationForm}
                 setShowForm={setShowApplicationForm}
+                editingApplication={editingApplication}
+                setEditingApplication={setEditingApplication}
               />
             )}
             {activeTab === "results" && (
@@ -587,6 +590,8 @@ const ApplicationsTab = ({
   onDelete,
   showForm,
   setShowForm,
+  editingApplication,
+  setEditingApplication,
 }) => {
   const getStatusColor = (status) => {
     const colors = {
@@ -606,6 +611,11 @@ const ApplicationsTab = ({
       cancelled: "Cancelada",
     };
     return labels[status] || status;
+  };
+
+  const handleEdit = (application) => {
+    setEditingApplication(application);
+    setShowForm(true);
   };
 
   return (
@@ -676,12 +686,17 @@ const ApplicationsTab = ({
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-right">
-                        <button className="text-blue-600 hover:text-blue-800 mr-3">
+                        <button
+                          onClick={() => handleEdit(app)}
+                          className="text-blue-600 hover:text-blue-800 mr-3"
+                          title="Editar Aplicação"
+                        >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => onDelete(app.id, "application")}
                           className="text-red-600 hover:text-red-800"
+                          title="Deletar"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -695,12 +710,17 @@ const ApplicationsTab = ({
         </>
       ) : (
         <ApplicationForm
+          application={editingApplication}
           exams={exams}
           classes={classes}
           teachers={teachers}
-          onClose={() => setShowForm(false)}
+          onClose={() => {
+            setShowForm(false);
+            setEditingApplication(null);
+          }}
           onSave={() => {
             setShowForm(false);
+            setEditingApplication(null);
             onRefresh();
           }}
         />
