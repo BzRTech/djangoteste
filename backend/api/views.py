@@ -556,14 +556,16 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     )
     serializer_class = TbStudentsSerializer
     lookup_field = 'id_student'  # ✅ Importante: usar id_student como lookup
+     
+    def retrieve(self, request, id_student=None):
+        """Retorna perfil completo do aluno (sobrescreve o retrieve padrão)"""
+        return self._get_profile_data()
     
-    @action(detail=True, methods=['get'])
-    def profile(self, request, id_student=None):
-        """Retorna perfil completo do aluno"""
+    def _get_profile_data(self):
+        """Método auxiliar que retorna os dados completos do perfil do aluno"""
         try:
             # ✅ Usar self.get_object() para buscar corretamente
             student = self.get_object()
-
             # Dados básicos do aluno com tratamento de None
             profile_data = {
                 'id_student': student.id_student,
@@ -577,18 +579,16 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                 'grade': student.id_class.grade if student.id_class else None,
                 'shift': student.id_class.shift if student.id_class else None,
             }
-            
             # Descritores conquistados
             achievements = TbStudentDescriptorAchievements.objects.filter(
                 id_student=student
             ).select_related('id_descriptor', 'id_exam_application')
-            
             descriptors_achieved = []
             for achievement in achievements:
                 exam_name = None
                 if achievement.id_exam_application and achievement.id_exam_application.id_exam:
                     exam_name = achievement.id_exam_application.id_exam.exam_name
-
+ 
                 descriptors_achieved.append({
                     'id': achievement.id_descriptor.id,
                     'descriptor_code': achievement.id_descriptor.descriptor_code,
@@ -599,12 +599,10 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                     'achieved_at': achievement.achieved_at,
                     'exam_name': exam_name,
                 })
-            
             # Todos os descritores do catálogo
             all_descriptors = TbDescriptorsCatalog.objects.all()
             total_descriptors = all_descriptors.count()
             achieved_count = len(descriptors_achieved)
-            
             # Agrupa descritores por disciplina
             descriptors_by_subject = {}
             for desc in all_descriptors:
@@ -622,16 +620,13 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                     'name': desc.descriptor_name,
                     'achieved': any(d['id'] == desc.id for d in descriptors_achieved)
                 })
-                
                 # Conta conquistados
                 if any(d['id'] == desc.id for d in descriptors_achieved):
                     descriptors_by_subject[subject]['achieved'] += 1
-            
             # Estatísticas de progresso
             learning_progress = TbStudentLearningProgress.objects.filter(
                 id_student=student
             ).select_related('id_descriptor').order_by('-assessment_date')[:5]
-
             recent_progress = []
             for progress in learning_progress:
                 recent_progress.append({
@@ -642,12 +637,10 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                     'score': float(progress.score),
                     'max_score': float(progress.max_score),
                 })
-            
             # Últimos resultados de provas
             exam_results = TbExamResults.objects.filter(
                 id_student=student
             ).select_related('id_exam_application__id_exam').order_by('-created_at')[:5]
-            
             recent_exams = []
             for result in exam_results:
                 recent_exams.append({
@@ -659,7 +652,6 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                     'wrong_answers': result.wrong_answers,
                     'application_date': result.id_exam_application.application_date,
                 })
-            
             profile_data['descriptors'] = {
                 'achieved': descriptors_achieved,
                 'total_count': total_descriptors,
@@ -667,13 +659,14 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                 'percentage': round((achieved_count / total_descriptors * 100), 2) if total_descriptors > 0 else 0,
                 'by_subject': descriptors_by_subject,
             }
-            
             profile_data['recent_progress'] = recent_progress
             profile_data['recent_exams'] = recent_exams
-            
             return Response(profile_data)
-            
         except TbStudents.DoesNotExist:
             return Response({'error': 'Aluno não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    @action(detail=True, methods=['get'])
+    def profile(self, request, id_student=None):
+        """Retorna perfil completo do aluno (mantido por compatibilidade)"""
+        return self._get_profile_data()

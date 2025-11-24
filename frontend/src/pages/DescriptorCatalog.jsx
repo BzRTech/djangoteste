@@ -1,20 +1,27 @@
 import React, { useState, useEffect, useCallback } from "react";
-import DescriptorStats from "../components/descriptors/DescriptorStats";
 import DescriptorFilters from "../components/descriptors/DescriptorFilters";
 import DescriptorList from "../components/descriptors/DescriptorList";
 import Pagination from "../components/Pagination";
-import { Loader2, AlertCircle, Target } from "lucide-react";
+import {
+  AlertCircle,
+  Target,
+  BookOpen,
+  GraduationCap,
+  Filter,
+  Database,
+} from "lucide-react";
 import Loading from "../components/Loading";
+import StatCard from "../components/StatCard";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 const DescriptorCatalog = () => {
   // Estados para TODOS os descritores (para filtros e contadores)
   const [allDescriptors, setAllDescriptors] = useState([]);
-  
+
   // Estados para descritores PAGINADOS (para exibição)
   const [pagedDescriptors, setPagedDescriptors] = useState([]);
-  
+
   // Estados de filtros e busca
   const [filteredDescriptors, setFilteredDescriptors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,8 +88,8 @@ const DescriptorCatalog = () => {
       setLoading(true);
 
       // Busca TODOS os descritores
-      const allDescriptorsArray = await fetchAllData('/descriptors/');
-      
+      const allDescriptorsArray = await fetchAllData("/descriptors/");
+
       setAllDescriptors(allDescriptorsArray);
       setDescriptorCount(allDescriptorsArray.length);
 
@@ -144,10 +151,16 @@ const DescriptorCatalog = () => {
     // Calcula paginação baseado nos filtros
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
     setDescriptorTotalPages(totalPages);
-    
+
     // Reset para página 1 quando filtros mudam
     setDescriptorPage(1);
-  }, [allDescriptors, searchTerm, selectedSubject, selectedGrade, selectedField]);
+  }, [
+    allDescriptors,
+    searchTerm,
+    selectedSubject,
+    selectedGrade,
+    selectedField,
+  ]);
 
   useEffect(() => {
     filterDescriptors();
@@ -171,10 +184,8 @@ const DescriptorCatalog = () => {
   const hasActiveFilters =
     searchTerm || selectedSubject || selectedGrade || selectedField;
 
-    if (loading) {
-    return (
-      <Loading/>
-    );
+  if (loading) {
+    return <Loading />;
   }
 
   if (error) {
@@ -218,12 +229,32 @@ const DescriptorCatalog = () => {
         </div>
 
         {/* Stats Cards - Com TODOS os descritores */}
-        <DescriptorStats
-          descriptors={allDescriptors}
-          subjects={subjects}
-          grades={grades}
-          filteredDescriptors={filteredDescriptors}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Total de Descritores"
+            value={allDescriptors.length}
+            icon={Database}
+            color="blue"
+          />
+          <StatCard
+            title="Disciplinas"
+            value={subjects.length}
+            icon={BookOpen}
+            color="green"
+          />
+          <StatCard
+            title="Séries"
+            value={grades.length}
+            icon={GraduationCap}
+            color="purple"
+          />
+          <StatCard
+            title="Filtrados"
+            value={filteredDescriptors.length}
+            icon={Filter}
+            color="orange"
+          />
+        </div>
 
         {/* Filtros */}
         <DescriptorFilters

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import Pagination from '../components/Pagination';
-import StatsCards from '../components/dashboard/StatsCards';
-import ChartsGrid from '../components/dashboard/ChartsGrid';
-import Loading from '../components/Loading';
+import React, { useState, useEffect } from "react";
+import Pagination from "../components/Pagination";
+import StatCard from "../components/StatCard";
+import ChartsGrid from "../components/dashboard/ChartsGrid";
+import Loading from "../components/Loading";
+import { Users, GraduationCap, School, BookOpen } from "lucide-react";
 
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 const Dashboard = () => {
   // Estados de dados - TODOS os dados (para gráficos)
@@ -74,13 +74,13 @@ const Dashboard = () => {
         allClassesArray,
         allTeachersArray,
         allSchoolsArray,
-        pagedStudentsRes
+        pagedStudentsRes,
       ] = await Promise.all([
-        fetchAllData('/students/'),
-        fetchAllData('/classes/'),
-        fetchAllData('/teachers/'),
-        fetchAllData('/schools/'),
-        fetch(`${API_BASE_URL}/students/?page=${studentPage}`)
+        fetchAllData("/students/"),
+        fetchAllData("/classes/"),
+        fetchAllData("/teachers/"),
+        fetchAllData("/schools/"),
+        fetch(`${API_BASE_URL}/students/?page=${studentPage}`),
       ]);
 
       // Salva todos os dados para gráficos
@@ -95,17 +95,26 @@ const Dashboard = () => {
       if (pagedStudentsData.results) {
         setPagedStudents(pagedStudentsData.results);
         setStudentCount(pagedStudentsData.count || 0);
-        setStudentTotalPages(Math.ceil((pagedStudentsData.count || 0) / ITEMS_PER_PAGE));
+        setStudentTotalPages(
+          Math.ceil((pagedStudentsData.count || 0) / ITEMS_PER_PAGE)
+        );
       } else {
-        const studentArray = Array.isArray(pagedStudentsData) ? pagedStudentsData : [];
-        setPagedStudents(studentArray.slice((studentPage - 1) * ITEMS_PER_PAGE, studentPage * ITEMS_PER_PAGE));
+        const studentArray = Array.isArray(pagedStudentsData)
+          ? pagedStudentsData
+          : [];
+        setPagedStudents(
+          studentArray.slice(
+            (studentPage - 1) * ITEMS_PER_PAGE,
+            studentPage * ITEMS_PER_PAGE
+          )
+        );
         setStudentCount(studentArray.length);
         setStudentTotalPages(Math.ceil(studentArray.length / ITEMS_PER_PAGE));
       }
 
       setError(null);
     } catch (err) {
-      console.error('Erro:', err);
+      console.error("Erro:", err);
       setError(err.message);
       setAllStudents([]);
       setAllClasses([]);
@@ -118,9 +127,7 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return (
-      <Loading />
-    );
+    return <Loading />;
   }
 
   if (error) {
@@ -128,11 +135,23 @@ const Dashboard = () => {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md">
           <div className="text-red-500 text-center mb-4">
-            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-16 h-16 mx-auto"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">Erro ao carregar dados</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">
+            Erro ao carregar dados
+          </h2>
           <p className="text-gray-600 mb-4 text-center">{error}</p>
           <p className="text-sm text-gray-500 mb-4 text-center">
             Verifique se o servidor Django está rodando em http://127.0.0.1:8000
@@ -153,23 +172,44 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Dashboard Escolar</h1>
-          <p className="text-gray-600">Visão geral do sistema de gestão educacional</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Dashboard Escolar
+          </h1>
+          <p className="text-gray-600">
+            Visão geral do sistema de gestão educacional
+          </p>
         </div>
 
         {/* Stats Cards - Com TODOS os dados */}
-        <StatsCards
-          students={allStudents}
-          classes={allClasses}
-          teachers={allTeachers}
-          schools={allSchools}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Total de Alunos"
+            value={allStudents.length}
+            icon={Users}
+            color="blue"
+          />
+          <StatCard
+            title="Turmas"
+            value={allClasses.length}
+            icon={BookOpen}
+            color="green"
+          />
+          <StatCard
+            title="Professores"
+            value={allTeachers.length}
+            icon={GraduationCap}
+            color="purple"
+          />
+          <StatCard
+            title="Escolas"
+            value={allSchools.length}
+            icon={School}
+            color="orange"
+          />
+        </div>
 
         {/* Charts - Com TODOS os dados */}
-        <ChartsGrid
-          students={allStudents}
-          classes={allClasses}
-        />
+        <ChartsGrid students={allStudents} classes={allClasses} />
 
         {/* Tabela de Alunos com Paginação - Apenas página atual */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -206,13 +246,19 @@ const Dashboard = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {pagedStudents.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="6"
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
                       Nenhum aluno encontrado
                     </td>
                   </tr>
                 ) : (
                   pagedStudents.map((student) => (
-                    <tr key={student.id_student} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={student.id_student}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {student.id_student}
                       </td>
@@ -229,26 +275,31 @@ const Dashboard = () => {
                         </a>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {student.class_name || 'N/A'}
+                        {student.class_name || "N/A"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${student.status === 'enrolled' || student.status === 'Ativo'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                          }`}>
-                          {student.status || 'N/A'}
+                        <span
+                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            student.status === "enrolled" ||
+                            student.status === "Ativo"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {student.status || "N/A"}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {student.enrollment_date
-                          ? new Date(student.enrollment_date).toLocaleDateString('pt-BR')
-                          : 'N/A'}
+                          ? new Date(
+                              student.enrollment_date
+                            ).toLocaleDateString("pt-BR")
+                          : "N/A"}
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
-              
             </table>
           </div>
 
