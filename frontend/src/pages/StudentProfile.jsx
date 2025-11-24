@@ -212,11 +212,11 @@ const StudentProfile = () => {
                     <Clock className="w-5 h-5" />
                     <span>
                       Turno:{" "}
-                      {profile.shift === "Manhã"
+                      {profile.shift === "morning"
                         ? "Matutino"
-                        : profile.shift === "Tarde"
+                        : profile.shift === "afternoon"
                         ? "Vespertino"
-                        : profile.shift === "Noite"
+                        : profile.shift === "night"
                         ? "Noturno"
                         : profile.shift || "Não informado"}
                     </span>
