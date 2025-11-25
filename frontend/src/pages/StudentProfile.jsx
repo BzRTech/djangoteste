@@ -420,6 +420,10 @@ const OverviewTab = ({
 
 const DescriptorsTab = ({ profile }) => {
   const [selectedSubject, setSelectedSubject] = useState("Todos");
+  const [localDescriptors, setLocalDescriptors] = useState(
+    profile.descriptors?.by_subject || {}
+  );
+  const [togglingDescriptor, setTogglingDescriptor] = useState(null);
 
   if (
     !profile.descriptors?.by_subject ||
@@ -432,11 +436,61 @@ const DescriptorsTab = ({ profile }) => {
     );
   }
 
-  const subjects = Object.keys(profile.descriptors.by_subject);
+  const handleDescriptorClick = async (descriptorId, currentStatus) => {
+    setTogglingDescriptor(descriptorId);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/student-profile/${profile.id_student}/toggle_descriptor/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            descriptor_id: descriptorId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar descritor");
+      }
+
+      const data = await response.json();
+
+      // Atualizar estado local
+      setLocalDescriptors((prev) => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach((subject) => {
+          updated[subject].descriptors = updated[subject].descriptors.map(
+            (desc) => {
+              if (desc.id === descriptorId) {
+                return { ...desc, achieved: data.achieved };
+              }
+              return desc;
+            }
+          );
+          // Recalcular achieved count
+          updated[subject].achieved = updated[subject].descriptors.filter(
+            (d) => d.achieved
+          ).length;
+        });
+        return updated;
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar descritor:", error);
+      alert("Erro ao atualizar descritor. Tente novamente.");
+    } finally {
+      setTogglingDescriptor(null);
+    }
+  };
+
+  const subjects = Object.keys(localDescriptors);
   const filteredSubjects =
     selectedSubject === "Todos"
-      ? profile.descriptors.by_subject
-      : { [selectedSubject]: profile.descriptors.by_subject[selectedSubject] };
+      ? localDescriptors
+      : { [selectedSubject]: localDescriptors[selectedSubject] };
 
   return (
     <div className="space-y-8">
@@ -454,9 +508,12 @@ const DescriptorsTab = ({ profile }) => {
                 : profile.shift
             }`}
         </h3>
-        <p className="text-gray-600">
+        <p className="text-gray-600 mb-2">
           Visualize abaixo todos os descritores da série do aluno. Verde =
           Conquistado | Vermelho = Não conquistado
+        </p>
+        <p className="text-blue-700 font-semibold text-sm">
+          💡 Clique em um descritor para atribuir/desatribuir ao aluno
         </p>
       </div>
 
@@ -515,12 +572,18 @@ const DescriptorsTab = ({ profile }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.isArray(data.descriptors) && data.descriptors.length > 0 ? (
               data.descriptors.map((desc) => (
-                <div
+                <button
                   key={desc.id}
-                  className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${
+                  onClick={() => handleDescriptorClick(desc.id, desc.achieved)}
+                  disabled={togglingDescriptor === desc.id}
+                  className={`p-4 rounded-lg border-2 transition-all text-left w-full ${
+                    togglingDescriptor === desc.id
+                      ? "opacity-50 cursor-wait"
+                      : "hover:shadow-xl hover:scale-105 cursor-pointer"
+                  } ${
                     desc.achieved
-                      ? "bg-green-50 border-green-500 shadow-md"
-                      : "bg-red-50 border-red-300 opacity-70"
+                      ? "bg-green-50 border-green-500 shadow-md hover:bg-green-100"
+                      : "bg-red-50 border-red-300 opacity-70 hover:opacity-90 hover:bg-red-100"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -547,7 +610,12 @@ const DescriptorsTab = ({ profile }) => {
                       {desc.achieved ? "Conquistado ✓" : "Não conquistado"}
                     </span>
                   </div>
-                </div>
+                  {togglingDescriptor === desc.id && (
+                    <div className="mt-2 text-xs text-blue-600 font-semibold">
+                      Atualizando...
+                    </div>
+                  )}
+                </button>
               ))
             ) : (
               <p className="text-gray-500 text-center py-4 col-span-full">
