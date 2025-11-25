@@ -309,7 +309,7 @@ const StudentProfile = () => {
               />
             )}
             {activeTab === "descriptors" && (
-              <DescriptorsTab profile={profile} />
+              <DescriptorsTab profile={profile} onUpdate={fetchProfile} />
             )}
             {activeTab === "exams" && <ExamsTab profile={profile} />}
             {activeTab === "progress" && <ProgressTab profile={profile} />}
@@ -418,7 +418,7 @@ const OverviewTab = ({
   </div>
 );
 
-const DescriptorsTab = ({ profile }) => {
+const DescriptorsTab = ({ profile, onUpdate }) => {
   const [selectedSubject, setSelectedSubject] = useState("Todos");
   const [localDescriptors, setLocalDescriptors] = useState(
     profile.descriptors?.by_subject || {}
@@ -478,6 +478,11 @@ const DescriptorsTab = ({ profile }) => {
         });
         return updated;
       });
+
+      // Recarregar dados completos do perfil
+      if (onUpdate) {
+        await onUpdate();
+      }
     } catch (error) {
       console.error("Erro ao atualizar descritor:", error);
       alert("Erro ao atualizar descritor. Tente novamente.");
