@@ -436,14 +436,16 @@ class TbStudentDescriptorAchievements(models.Model):  # ✅ Renomeado
     id = models.AutoField(primary_key=True)
     id_student = models.ForeignKey(TbStudents, on_delete=models.DO_NOTHING, db_column='id_student')
     id_descriptor = models.ForeignKey(  # ✅ Renomeado
-        TbDescriptorsCatalog, 
-        on_delete=models.DO_NOTHING, 
+        TbDescriptorsCatalog,
+        on_delete=models.DO_NOTHING,
         db_column='id_descriptor'
     )
     id_exam_application = models.ForeignKey(
-        TbExamApplications, 
-        on_delete=models.DO_NOTHING, 
-        db_column='id_exam_application'
+        TbExamApplications,
+        on_delete=models.DO_NOTHING,
+        db_column='id_exam_application',
+        blank=True,  # ✅ Permite vazio em forms
+        null=True    # ✅ Permite NULL no banco (para atribuições manuais)
     )
     achieved_at = models.DateTimeField(auto_now_add=True)
 
@@ -452,6 +454,7 @@ class TbStudentDescriptorAchievements(models.Model):  # ✅ Renomeado
         db_table = 'tb_student_descriptor_achievements'  # ✅ Nome correto
         verbose_name = 'Conquista de Descritor'
         verbose_name_plural = 'Conquistas de Descritores'
+        unique_together = [['id_student', 'id_descriptor']]  # ✅ Evita duplicatas
 
 
 class TbStudentLearningProgress(models.Model):
