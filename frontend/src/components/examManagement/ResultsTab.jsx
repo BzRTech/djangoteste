@@ -89,9 +89,9 @@ const ResultsTab = ({
 
   const stats = calculateStats();
 
-  // Filtra apenas aplicações concluídas
-  const completedApplications = Array.isArray(applications) 
-    ? applications.filter(app => app.status === 'completed')
+  // Filtra aplicações concluídas ou em andamento que já tenham resultados
+  const completedApplications = Array.isArray(applications)
+    ? applications.filter(app => app.status === 'completed' || app.status === 'in_progress')
     : [];
 
   return (
@@ -118,7 +118,7 @@ const ResultsTab = ({
         >
           <option value="">-- Selecione uma aplicação --</option>
           {completedApplications.length === 0 ? (
-            <option disabled>Nenhuma aplicação concluída disponível</option>
+            <option disabled>Nenhuma aplicação disponível</option>
           ) : (
             completedApplications.map((app) => {
               const info = getApplicationInfo(app.id);

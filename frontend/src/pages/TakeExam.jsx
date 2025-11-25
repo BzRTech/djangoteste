@@ -56,6 +56,7 @@ const TakeExam = () => {
   const [startTime, setStartTime] = useState(null);
 
   const [timeElapsed, setTimeElapsed] = useState(0);
+  const [autoCloseTimer, setAutoCloseTimer] = useState(10); // Timer de 10 segundos
 
   // Carregar lista de alunos (apenas para demonstração)
 
@@ -95,7 +96,7 @@ const TakeExam = () => {
     }
   }, [studentId, student]);
 
-  // Timer
+  // Timer de tempo decorrido
 
   useEffect(() => {
     let interval;
@@ -108,6 +109,26 @@ const TakeExam = () => {
 
     return () => clearInterval(interval);
   }, [startTime, submitted]);
+
+  // Timer de auto-fechamento após submissão
+  useEffect(() => {
+    let interval;
+
+    if (submitted && result && autoCloseTimer > 0) {
+      interval = setInterval(() => {
+        setAutoCloseTimer((prev) => {
+          if (prev <= 1) {
+            // Quando chegar a 0, redireciona
+            resetExam();
+            return 10; // Reset para próxima vez
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => clearInterval(interval);
+  }, [submitted, result, autoCloseTimer]);
 
   const loadAvailableExams = async () => {
     try {
@@ -288,20 +309,53 @@ const TakeExam = () => {
 
       const responseData = await response.json();
 
-      // Buscar resultado
+      // Aguardar um momento para o backend processar os dados
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const resultResponse = await fetch(
-        `${API_BASE_URL}/exam-results/?id_student=${studentId}&id_exam_application=${selectedExam.id}`
-      );
+      // Buscar resultado com retry
+      let attempts = 0;
+      let resultFound = false;
 
-      if (resultResponse.ok) {
-        const resultData = await resultResponse.json();
+      while (attempts < 3 && !resultFound) {
+        const resultResponse = await fetch(
+          `${API_BASE_URL}/exam-results/?id_student=${studentId}&id_exam_application=${selectedExam.id}`
+        );
 
-        const results = Array.isArray(resultData)
-          ? resultData
-          : resultData.results || [];
+        if (resultResponse.ok) {
+          const resultData = await resultResponse.json();
 
-        setResult(results[0] || null);
+          const results = Array.isArray(resultData)
+            ? resultData
+            : resultData.results || [];
+
+          if (results.length > 0) {
+            setResult(results[0]);
+            resultFound = true;
+          } else if (attempts < 2) {
+            // Se não encontrou resultado, aguarda antes de tentar novamente
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        attempts++;
+      }
+
+      // Se não encontrou resultado após tentativas, define um resultado padrão baseado na resposta
+      if (!resultFound) {
+        if (responseData.result) {
+          setResult(responseData.result);
+        } else {
+          console.warn('Resultado não encontrado após 3 tentativas. Os dados podem demorar um pouco para aparecer no perfil.');
+          // Define um resultado básico para evitar erros
+          setResult({
+            total_score: 0,
+            max_score: questions.length,
+            correct_answers: 0,
+            wrong_answers: 0,
+            blank_answers: questions.length - Object.keys(answers).length,
+            created_at: new Date().toISOString()
+          });
+        }
       }
 
       setSubmitted(true);
@@ -332,6 +386,8 @@ const TakeExam = () => {
     setStartTime(null);
 
     setTimeElapsed(0);
+
+    setAutoCloseTimer(10); // Reset do timer de auto-fechamento
 
     loadAvailableExams();
   };
@@ -435,7 +491,14 @@ const TakeExam = () => {
                 {passed ? "Parabéns!" : "Prova Concluída!"}
               </h1>
 
-              <p className="text-gray-600">Sua prova foi enviada com sucesso</p>
+              <p className="text-gray-600 mb-3">Sua prova foi enviada com sucesso</p>
+
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <Clock className="w-4 h-4" />
+                <span>
+                  Voltando à lista de provas em {autoCloseTimer} segundo{autoCloseTimer !== 1 ? 's' : ''}...
+                </span>
+              </div>
             </div>
 
             {/* Estatísticas */}
@@ -515,22 +578,32 @@ const TakeExam = () => {
 
             {/* Botões */}
 
-            <div className="flex gap-4">
-              <button
-                onClick={resetExam}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <FileText className="w-5 h-5" />
-                Ver Outras Provas
-              </button>
+            <div className="flex flex-col gap-3">
+              {autoCloseTimer > 0 && (
+                <button
+                  onClick={() => setAutoCloseTimer(0)}
+                  className="w-full px-6 py-2 text-sm bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors border border-yellow-300"
+                >
+                  Cancelar fechamento automático
+                </button>
+              )}
+              <div className="flex gap-4">
+                <button
+                  onClick={resetExam}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <FileText className="w-5 h-5" />
+                  Ver Outras Provas
+                </button>
 
-              <button
-                onClick={() => (window.location.href = "/dashboard")}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                <Home className="w-5 h-5" />
-                Voltar ao Início
-              </button>
+                <button
+                  onClick={() => (window.location.href = "/dashboard")}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  <Home className="w-5 h-5" />
+                  Voltar ao Início
+                </button>
+              </div>
             </div>
           </div>
         </div>
