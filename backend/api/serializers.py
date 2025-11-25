@@ -210,21 +210,16 @@ class TbAlternativesSerializer(serializers.ModelSerializer):
         return str(obj.alternative_order)
 
 class TbAlternativesCreateSerializer(serializers.ModelSerializer):
-
     """Serializer para criação de alternativas (apenas campos necessários)"""
-
     class Meta:
-
         model = TbAlternatives
-
         fields = ['alternative_order', 'alternative_text', 'is_correct', 'distractor_type']
-
         extra_kwargs = {
-
             'distractor_type': {'required': False, 'allow_null': True, 'allow_blank': True}
-
         }
-        
+
+
+# ✅ SERIALIZER DE LEITURA (usado para GET)
 class TbQuestionsSerializer(serializers.ModelSerializer):
     exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
     descriptor_name = serializers.CharField(source='id_descriptor.descriptor_name', read_only=True, allow_null=True)
@@ -247,6 +242,7 @@ class TbQuestionsSerializer(serializers.ModelSerializer):
         }
 
 
+# ✅ SERIALIZER DE ESCRITA (usado para POST/PUT)
 class TbQuestionsCreateSerializer(serializers.ModelSerializer):
     """Serializer otimizado para criação de questão com alternativas aninhadas"""
     alternatives = TbAlternativesCreateSerializer(many=True, required=False)
@@ -258,6 +254,13 @@ class TbQuestionsCreateSerializer(serializers.ModelSerializer):
             'question_type', 'correct_answer', 'skill_assessed',
             'difficulty_level', 'points', 'id_descriptor', 'alternatives'
         ]
+        extra_kwargs = {
+            'id_descriptor': {'required': False, 'allow_null': True},
+            'correct_answer': {'required': False, 'allow_null': True},
+            'skill_assessed': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'difficulty_level': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'points': {'required': False, 'allow_null': True},
+        }
     
     def create(self, validated_data):
         alternatives_data = validated_data.pop('alternatives', [])
@@ -266,6 +269,7 @@ class TbQuestionsCreateSerializer(serializers.ModelSerializer):
         for alt_data in alternatives_data:
             TbAlternatives.objects.create(id_question=question, **alt_data)
 
+        # ✅ CORREÇÃO: Retorna usando o serializer completo para incluir as alternativas
         return question
 
     def update(self, instance, validated_data):
@@ -284,6 +288,13 @@ class TbQuestionsCreateSerializer(serializers.ModelSerializer):
             TbAlternatives.objects.create(id_question=instance, **alt_data)
 
         return instance
+    
+    def to_representation(self, instance):
+        """
+        ✅ SOLUÇÃO: Usa o TbQuestionsSerializer para serializar a resposta
+        Isso garante que as alternativas sejam incluídas no response
+        """
+        return TbQuestionsSerializer(instance, context=self.context).data
 
 
 class TbQuestionCompetencySerializer(serializers.ModelSerializer):
@@ -314,23 +325,23 @@ class TbExamsDetailSerializer(serializers.ModelSerializer):
 
 
 # ============================================
-# 5. APLICAÇÃO (EXECUÇÃO) DAS PROVAS
+# 5. APLICAÇÃO DE PROVAS
 # ============================================
 
 class TbExamApplicationsSerializer(serializers.ModelSerializer):
+    """Serializer básico para aplicação de exames"""
     exam_name = serializers.CharField(source='id_exam.exam_name', read_only=True)
-    exam_title = serializers.CharField(source='id_exam.exam_name', read_only=True)  # Alias para frontend
     class_name = serializers.CharField(source='id_class.class_name', read_only=True)
     teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
     students_count = serializers.SerializerMethodField()
-
+    
     class Meta:
         model = TbExamApplications
         fields = [
-            'id', 'id_exam', 'exam_name', 'exam_title', 'id_class', 'class_name',
-            'id_teacher', 'teacher_name', 'application_date',
-            'start_time', 'end_time', 'status', 'observations',
-            'application_type', 'assessment_period', 'fiscal_year', 'students_count', 'created_at'
+            'id', 'id_exam', 'exam_name', 'id_class', 'class_name',
+            'id_teacher', 'teacher_name', 'application_date', 'start_time',
+            'end_time', 'status', 'observations', 'application_type',
+            'assessment_period', 'fiscal_year', 'students_count', 'created_at'
         ]
         extra_kwargs = {
             'start_time': {'required': False, 'allow_null': True},
