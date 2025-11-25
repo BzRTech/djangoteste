@@ -676,3 +676,58 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     def profile(self, request, id_student=None):
         """Retorna perfil completo do aluno (mantido por compatibilidade)"""
         return self._get_profile_data()
+
+    @action(detail=True, methods=['post'])
+    def toggle_descriptor(self, request, id_student=None):
+        """Toggle descritor para o aluno (atribuir/desatribuir)"""
+        try:
+            student = self.get_object()
+            descriptor_id = request.data.get('descriptor_id')
+
+            if not descriptor_id:
+                return Response(
+                    {'error': 'descriptor_id é obrigatório'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Verificar se o descritor existe
+            try:
+                descriptor = TbDescriptorsCatalog.objects.get(id=descriptor_id)
+            except TbDescriptorsCatalog.DoesNotExist:
+                return Response(
+                    {'error': 'Descritor não encontrado'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Verificar se já existe uma conquista
+            achievement = TbStudentDescriptorAchievements.objects.filter(
+                id_student=student,
+                id_descriptor=descriptor
+            ).first()
+
+            if achievement:
+                # Se existe, remover (desatribuir)
+                achievement.delete()
+                return Response({
+                    'message': 'Descritor desatribuído com sucesso',
+                    'achieved': False,
+                    'descriptor_id': descriptor_id
+                }, status=status.HTTP_200_OK)
+            else:
+                # Se não existe, criar (atribuir)
+                TbStudentDescriptorAchievements.objects.create(
+                    id_student=student,
+                    id_descriptor=descriptor,
+                    id_exam_application=None  # Manual assignment
+                )
+                return Response({
+                    'message': 'Descritor atribuído com sucesso',
+                    'achieved': True,
+                    'descriptor_id': descriptor_id
+                }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao processar solicitação: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
