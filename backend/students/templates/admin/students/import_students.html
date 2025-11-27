@@ -1,0 +1,269 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Importar Estudantes em Lote{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .import-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .import-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #417690;
+    }
+
+    .import-header h1 {
+        color: #417690;
+        margin: 0 0 10px 0;
+        font-size: 28px;
+    }
+
+    .import-header p {
+        color: #666;
+        margin: 0;
+        font-size: 14px;
+    }
+
+    .upload-section {
+        margin: 30px 0;
+        padding: 30px;
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .upload-icon {
+        font-size: 64px;
+        color: #417690;
+        margin-bottom: 20px;
+    }
+
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        margin: 20px 0;
+    }
+
+    .file-input-wrapper input[type=file] {
+        font-size: 100px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .file-input-label {
+        display: inline-block;
+        padding: 12px 30px;
+        background: #417690;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background 0.3s;
+    }
+
+    .file-input-label:hover {
+        background: #2e5a6f;
+    }
+
+    .file-name {
+        margin-top: 15px;
+        padding: 10px;
+        background: white;
+        border-radius: 4px;
+        color: #333;
+        font-weight: 500;
+        display: none;
+    }
+
+    .file-name.active {
+        display: block;
+    }
+
+    .instructions-section {
+        margin: 30px 0;
+        padding: 20px;
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        border-radius: 4px;
+    }
+
+    .instructions-section h3 {
+        margin-top: 0;
+        color: #856404;
+        font-size: 18px;
+    }
+
+    .instructions-section ul {
+        margin: 10px 0;
+        padding-left: 20px;
+    }
+
+    .instructions-section li {
+        margin: 8px 0;
+        color: #856404;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .btn-submit, .btn-download, .btn-back {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+    }
+
+    .btn-submit {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-submit:hover {
+        background: #218838;
+    }
+
+    .btn-download {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .btn-download:hover {
+        background: #138496;
+    }
+
+    .btn-back {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-back:hover {
+        background: #5a6268;
+    }
+
+    .supported-formats {
+        margin-top: 15px;
+        color: #666;
+        font-size: 13px;
+    }
+
+    .supported-formats strong {
+        color: #333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    <div class="import-header">
+        <h1>📊 Importar Estudantes em Lote</h1>
+        <p>Faça o upload de uma planilha Excel ou CSV para cadastrar múltiplos estudantes de uma vez</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" style="padding: 15px; margin: 20px 0; border-radius: 4px; {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% elif message.tags == 'success' %}background: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% endif %}">
+                {{ message|safe }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="instructions-section">
+        <h3>⚠️ Instruções Importantes</h3>
+        <ul>
+            <li><strong>Baixe o modelo:</strong> Use o botão abaixo para baixar a planilha modelo com o formato correto</li>
+            <li><strong>Preencha os dados:</strong> Insira as informações dos estudantes seguindo o exemplo fornecido</li>
+            <li><strong>Colunas obrigatórias:</strong> student_serial, student_name, class_name</li>
+            <li><strong>Turmas:</strong> O nome da turma deve existir no sistema e corresponder exatamente</li>
+            <li><strong>Matrículas duplicadas:</strong> Se o student_serial já existir, o estudante será atualizado</li>
+        </ul>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="uploadForm">
+        {% csrf_token %}
+
+        <div class="upload-section">
+            <div class="upload-icon">📤</div>
+
+            <div class="file-input-wrapper">
+                <label class="file-input-label" for="fileInput">
+                    Escolher Arquivo
+                </label>
+                <input type="file" id="fileInput" name="excel_file" accept=".xlsx,.xls,.csv" required>
+            </div>
+
+            <div class="file-name" id="fileName">
+                Nenhum arquivo selecionado
+            </div>
+
+            <div class="supported-formats">
+                <strong>Formatos aceitos:</strong> .xlsx, .xls, .csv
+            </div>
+        </div>
+
+        <div class="button-group">
+            <a href="{% url 'admin:students_template' %}" class="btn-download">
+                ⬇️ Baixar Modelo
+            </a>
+            <button type="submit" class="btn-submit">
+                ✅ Importar Estudantes
+            </button>
+            <a href="{% url 'admin:students_tbstudents_changelist' %}" class="btn-back">
+                ← Voltar
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name;
+    const fileNameDiv = document.getElementById('fileName');
+
+    if (fileName) {
+        fileNameDiv.textContent = '📄 ' + fileName;
+        fileNameDiv.classList.add('active');
+    } else {
+        fileNameDiv.textContent = 'Nenhum arquivo selecionado';
+        fileNameDiv.classList.remove('active');
+    }
+});
+
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('fileInput');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        e.preventDefault();
+        alert('Por favor, selecione um arquivo para importar.');
+        return false;
+    }
+
+    // Mostra mensagem de processamento
+    const submitBtn = this.querySelector('.btn-submit');
+    submitBtn.textContent = '⏳ Processando...';
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}
