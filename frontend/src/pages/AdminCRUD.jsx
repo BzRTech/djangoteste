@@ -10,6 +10,11 @@ import {
   Save,
   X,
   Loader2,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import Pagination from "../components/Pagination";
 import Loading from "../components/Loading";
@@ -50,6 +55,7 @@ const AdminCRUD = () => {
     },
     { id: "classes", label: "Turmas", icon: BookOpen, color: "purple" },
     { id: "students", label: "Alunos", icon: Users, color: "orange" },
+    { id: "import", label: "Importar", icon: Upload, color: "indigo" },
   ];
 
   useEffect(() => {
@@ -184,6 +190,7 @@ const AdminCRUD = () => {
     green: "bg-green-600 hover:bg-green-700",
     purple: "bg-purple-600 hover:bg-purple-700",
     orange: "bg-orange-600 hover:bg-orange-700",
+    indigo: "bg-indigo-600 hover:bg-indigo-700",
   };
   if (loading) {
     return <Loading />;
@@ -230,7 +237,9 @@ const AdminCRUD = () => {
 
           {/* Content */}
           <div className="p-6 bg-gray-50">
-            {!showForm ? (
+            {activeTab === "import" ? (
+              <ImportStudents onImportSuccess={fetchAllData} />
+            ) : !showForm ? (
               <>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-2xl font-bold text-gray-800">
@@ -1291,6 +1300,307 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
         </button>
       </div>
     </form>
+  );
+};
+
+// ============================================
+// COMPONENTE DE IMPORTAÇÃO
+// ============================================
+
+const ImportStudents = ({ onImportSuccess }) => {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+      setResult(null);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setResult(null);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      alert("Por favor, selecione um arquivo");
+      return;
+    }
+
+    setUploading(true);
+    setResult(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/students/bulk_import/`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResult({
+          success: true,
+          message: data.message,
+          created: data.created,
+          updated: data.updated,
+          errors: data.errors,
+        });
+        setFile(null);
+        onImportSuccess();
+      } else {
+        setResult({
+          success: false,
+          message: data.error || "Erro ao importar arquivo",
+        });
+      }
+    } catch (error) {
+      setResult({
+        success: false,
+        message: "Erro ao conectar com o servidor",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const downloadTemplate = () => {
+    const csvContent = `student_name,student_serial,id_class,enrollment_date,status
+João Silva,12345,1,2025-01-15,enrolled
+Maria Santos,12346,1,2025-01-15,enrolled
+Pedro Oliveira,12347,2,2025-01-15,enrolled`;
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "template_estudantes.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          Importar Alunos em Lote
+        </h2>
+        <p className="text-gray-600">
+          Faça upload de um arquivo CSV ou Excel com os dados dos alunos
+        </p>
+      </div>
+
+      {/* Download Template */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex items-start gap-3">
+          <FileSpreadsheet className="w-5 h-5 text-blue-600 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-semibold text-blue-900 mb-1">
+              Modelo de arquivo
+            </h3>
+            <p className="text-sm text-blue-700 mb-3">
+              Baixe o modelo CSV com o formato correto para preencher os dados
+              dos alunos
+            </p>
+            <button
+              onClick={downloadTemplate}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Baixar Modelo CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Instruções */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+        <h3 className="font-semibold text-gray-900 mb-2">
+          Formato do arquivo
+        </h3>
+        <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+          <li>
+            <strong>student_name</strong>: Nome do aluno (obrigatório)
+          </li>
+          <li>
+            <strong>student_serial</strong>: Matrícula do aluno (obrigatório,
+            número único)
+          </li>
+          <li>
+            <strong>id_class</strong>: ID da turma (obrigatório, número)
+          </li>
+          <li>
+            <strong>enrollment_date</strong>: Data de matrícula (opcional,
+            formato YYYY-MM-DD)
+          </li>
+          <li>
+            <strong>status</strong>: Status do aluno (opcional, padrão:
+            enrolled)
+          </li>
+        </ul>
+      </div>
+
+      {/* Upload Area */}
+      <div
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          dragActive
+            ? "border-indigo-500 bg-indigo-50"
+            : "border-gray-300 bg-white"
+        }`}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
+        <Upload
+          className={`w-12 h-12 mx-auto mb-4 ${
+            dragActive ? "text-indigo-600" : "text-gray-400"
+          }`}
+        />
+        <p className="text-lg font-medium text-gray-700 mb-2">
+          {file
+            ? file.name
+            : "Arraste o arquivo aqui ou clique para selecionar"}
+        </p>
+        <p className="text-sm text-gray-500 mb-4">
+          Formatos aceitos: CSV, XLSX, XLS
+        </p>
+        <input
+          type="file"
+          id="file-upload"
+          className="hidden"
+          accept=".csv,.xlsx,.xls"
+          onChange={handleFileChange}
+        />
+        <label
+          htmlFor="file-upload"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition-colors"
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          Selecionar Arquivo
+        </label>
+      </div>
+
+      {/* Upload Button */}
+      {file && (
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={handleUpload}
+            disabled={uploading}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Importando...
+              </>
+            ) : (
+              <>
+                <Upload className="w-5 h-5" />
+                Importar Alunos
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setFile(null);
+              setResult(null);
+            }}
+            disabled={uploading}
+            className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {/* Result */}
+      {result && (
+        <div
+          className={`mt-6 p-4 rounded-lg border ${
+            result.success
+              ? "bg-green-50 border-green-200"
+              : "bg-red-50 border-red-200"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            {result.success ? (
+              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+            )}
+            <div className="flex-1">
+              <h3
+                className={`font-semibold mb-1 ${
+                  result.success ? "text-green-900" : "text-red-900"
+                }`}
+              >
+                {result.success ? "Importação concluída!" : "Erro na importação"}
+              </h3>
+              <p
+                className={`text-sm mb-2 ${
+                  result.success ? "text-green-700" : "text-red-700"
+                }`}
+              >
+                {result.message}
+              </p>
+
+              {result.success && (
+                <div className="flex gap-4 text-sm">
+                  <span className="text-green-700">
+                    <strong>{result.created}</strong> criados
+                  </span>
+                  <span className="text-green-700">
+                    <strong>{result.updated}</strong> atualizados
+                  </span>
+                </div>
+              )}
+
+              {result.errors && result.errors.length > 0 && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="font-semibold text-yellow-900 mb-2">
+                    Avisos ({result.errors.length}):
+                  </p>
+                  <ul className="text-xs text-yellow-800 space-y-1 max-h-40 overflow-y-auto">
+                    {result.errors.map((error, idx) => (
+                      <li key={idx}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
