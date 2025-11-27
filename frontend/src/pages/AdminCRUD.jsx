@@ -1391,10 +1391,10 @@ const ImportStudents = ({ onImportSuccess }) => {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `Nome do Estudante,Matricula,Ano,Turma,Data da Matricula
-João Silva,12345,2025,Turma A,15/01/2025
-Maria Santos,12346,2025,Turma A,15/01/2025
-Pedro Oliveira,12347,2025,Turma B,15/01/2025`;
+    const csvContent = `Nome do Estudante,Matricula,Serie,Turma,Data da Matricula
+João Silva,12345,5º ano,Turma A,15/01/2025
+Maria Santos,12346,5º ano,Turma A,15/01/2025
+Pedro Oliveira,12347,9º ano,Turma B,15/01/2025`;
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -1455,7 +1455,7 @@ Pedro Oliveira,12347,2025,Turma B,15/01/2025`;
             número único)
           </li>
           <li>
-            <strong>Ano</strong>: Ano letivo (obrigatório, número. Ex: 2025)
+            <strong>Serie</strong>: Série escolar do aluno (obrigatório. Ex: 5º ano, 9º ano)
           </li>
           <li>
             <strong>Turma</strong>: Nome da turma (obrigatório. Ex: Turma A)

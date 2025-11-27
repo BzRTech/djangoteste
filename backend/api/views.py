@@ -130,8 +130,8 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
         Formato esperado do arquivo:
         - Nome do Estudante: Nome completo do aluno (obrigatório)
         - Matricula: Número de matrícula do aluno (obrigatório)
-        - Ano: Ano letivo (obrigatório)
-        - Turma: Nome da turma (obrigatório)
+        - Serie: Série escolar (obrigatório. Ex: 5º ano, 9º ano)
+        - Turma: Nome da turma (obrigatório. Ex: Turma A)
         - Data da Matricula: Data de matrícula (opcional, formato DD/MM/YYYY ou YYYY-MM-DD)
         """
         import csv
@@ -193,7 +193,7 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                         # Validação dos campos obrigatórios - aceita português
                         student_name = normalized_row.get('nome do estudante', '').strip() if normalized_row.get('nome do estudante') else ''
                         student_serial = normalized_row.get('matricula')
-                        year = normalized_row.get('ano')
+                        grade = normalized_row.get('serie', '').strip() if normalized_row.get('serie') else ''
                         class_name = normalized_row.get('turma', '').strip() if normalized_row.get('turma') else ''
 
                         if not student_name:
@@ -204,33 +204,32 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                             errors.append(f"Linha {idx}: Matrícula é obrigatória")
                             continue
 
-                        if not year:
-                            errors.append(f"Linha {idx}: Ano é obrigatório")
+                        if not grade:
+                            errors.append(f"Linha {idx}: Serie é obrigatória")
                             continue
 
                         if not class_name:
                             errors.append(f"Linha {idx}: Turma é obrigatória")
                             continue
 
-                        # Converte tipos
+                        # Converte matrícula para número
                         try:
                             student_serial = int(student_serial)
-                            year = int(year)
                         except (ValueError, TypeError):
-                            errors.append(f"Linha {idx}: Matrícula e Ano devem ser números")
+                            errors.append(f"Linha {idx}: Matrícula deve ser um número")
                             continue
 
-                        # Busca a turma pelo nome e ano
+                        # Busca a turma pelo nome e série
                         try:
                             class_obj = TbClass.objects.get(
                                 class_name=class_name,
-                                school_year=year
+                                grade=grade
                             )
                         except TbClass.DoesNotExist:
-                            errors.append(f"Linha {idx}: Turma '{class_name}' do ano {year} não encontrada")
+                            errors.append(f"Linha {idx}: Turma '{class_name}' da série '{grade}' não encontrada")
                             continue
                         except TbClass.MultipleObjectsReturned:
-                            errors.append(f"Linha {idx}: Múltiplas turmas encontradas com o nome '{class_name}' no ano {year}. Use nomes únicos.")
+                            errors.append(f"Linha {idx}: Múltiplas turmas encontradas com o nome '{class_name}' na série '{grade}'. Use nomes únicos.")
                             continue
 
                         # Processa data de matrícula
