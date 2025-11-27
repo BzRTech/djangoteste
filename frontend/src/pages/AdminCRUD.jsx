@@ -1391,10 +1391,10 @@ const ImportStudents = ({ onImportSuccess }) => {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `student_name,student_serial,id_class,enrollment_date,status
-João Silva,12345,1,2025-01-15,enrolled
-Maria Santos,12346,1,2025-01-15,enrolled
-Pedro Oliveira,12347,2,2025-01-15,enrolled`;
+    const csvContent = `Nome do Estudante,Matricula,Ano,Turma,Data da Matricula
+João Silva,12345,2025,Turma A,15/01/2025
+Maria Santos,12346,2025,Turma A,15/01/2025
+Pedro Oliveira,12347,2025,Turma B,15/01/2025`;
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -1448,22 +1448,21 @@ Pedro Oliveira,12347,2,2025-01-15,enrolled`;
         </h3>
         <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
           <li>
-            <strong>student_name</strong>: Nome do aluno (obrigatório)
+            <strong>Nome do Estudante</strong>: Nome completo do aluno (obrigatório)
           </li>
           <li>
-            <strong>student_serial</strong>: Matrícula do aluno (obrigatório,
+            <strong>Matricula</strong>: Número de matrícula do aluno (obrigatório,
             número único)
           </li>
           <li>
-            <strong>id_class</strong>: ID da turma (obrigatório, número)
+            <strong>Ano</strong>: Ano letivo (obrigatório, número. Ex: 2025)
           </li>
           <li>
-            <strong>enrollment_date</strong>: Data de matrícula (opcional,
-            formato YYYY-MM-DD)
+            <strong>Turma</strong>: Nome da turma (obrigatório. Ex: Turma A)
           </li>
           <li>
-            <strong>status</strong>: Status do aluno (opcional, padrão:
-            enrolled)
+            <strong>Data da Matricula</strong>: Data de matrícula (opcional,
+            formato DD/MM/YYYY. Ex: 15/01/2025)
           </li>
         </ul>
       </div>

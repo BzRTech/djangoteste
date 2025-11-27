@@ -128,11 +128,11 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
         Importa múltiplos estudantes via upload de arquivo CSV/Excel
 
         Formato esperado do arquivo:
-        - student_name: Nome do aluno (obrigatório)
-        - student_serial: Matrícula (obrigatório)
-        - id_class: ID da turma (obrigatório)
-        - enrollment_date: Data de matrícula (opcional, formato YYYY-MM-DD)
-        - status: Status (opcional, padrão: enrolled)
+        - Nome do Estudante: Nome completo do aluno (obrigatório)
+        - Matricula: Número de matrícula do aluno (obrigatório)
+        - Ano: Ano letivo (obrigatório)
+        - Turma: Nome da turma (obrigatório)
+        - Data da Matricula: Data de matrícula (opcional, formato DD/MM/YYYY ou YYYY-MM-DD)
         """
         import csv
         import io
@@ -183,51 +183,74 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
             with transaction.atomic():
                 for idx, row in enumerate(rows, start=2):
                     try:
-                        # Validação dos campos obrigatórios
-                        student_name = row.get('student_name', '').strip()
-                        student_serial = row.get('student_serial')
-                        id_class = row.get('id_class')
+                        # Normaliza os nomes das colunas (remove espaços extras e converte para lowercase)
+                        normalized_row = {}
+                        for key, value in row.items():
+                            if key:
+                                clean_key = key.strip().lower()
+                                normalized_row[clean_key] = value
+
+                        # Validação dos campos obrigatórios - aceita português
+                        student_name = normalized_row.get('nome do estudante', '').strip() if normalized_row.get('nome do estudante') else ''
+                        student_serial = normalized_row.get('matricula')
+                        year = normalized_row.get('ano')
+                        class_name = normalized_row.get('turma', '').strip() if normalized_row.get('turma') else ''
 
                         if not student_name:
-                            errors.append(f"Linha {idx}: Nome do aluno é obrigatório")
+                            errors.append(f"Linha {idx}: Nome do Estudante é obrigatório")
                             continue
 
                         if not student_serial:
                             errors.append(f"Linha {idx}: Matrícula é obrigatória")
                             continue
 
-                        if not id_class:
-                            errors.append(f"Linha {idx}: ID da turma é obrigatório")
+                        if not year:
+                            errors.append(f"Linha {idx}: Ano é obrigatório")
+                            continue
+
+                        if not class_name:
+                            errors.append(f"Linha {idx}: Turma é obrigatória")
                             continue
 
                         # Converte tipos
                         try:
                             student_serial = int(student_serial)
-                            id_class = int(id_class)
+                            year = int(year)
                         except (ValueError, TypeError):
-                            errors.append(f"Linha {idx}: Matrícula e ID da turma devem ser números")
+                            errors.append(f"Linha {idx}: Matrícula e Ano devem ser números")
                             continue
 
-                        # Verifica se a turma existe
+                        # Busca a turma pelo nome e ano
                         try:
-                            class_obj = TbClass.objects.get(id=id_class)
+                            class_obj = TbClass.objects.get(
+                                class_name=class_name,
+                                school_year=year
+                            )
                         except TbClass.DoesNotExist:
-                            errors.append(f"Linha {idx}: Turma com ID {id_class} não encontrada")
+                            errors.append(f"Linha {idx}: Turma '{class_name}' do ano {year} não encontrada")
+                            continue
+                        except TbClass.MultipleObjectsReturned:
+                            errors.append(f"Linha {idx}: Múltiplas turmas encontradas com o nome '{class_name}' no ano {year}. Use nomes únicos.")
                             continue
 
-                        # Processa campos opcionais
-                        enrollment_date = row.get('enrollment_date')
+                        # Processa data de matrícula
+                        enrollment_date = normalized_row.get('data da matricula')
                         if enrollment_date:
                             if isinstance(enrollment_date, str):
+                                # Tenta formato DD/MM/YYYY primeiro, depois YYYY-MM-DD
                                 try:
-                                    enrollment_date = datetime.strptime(enrollment_date, '%Y-%m-%d').date()
+                                    enrollment_date = datetime.strptime(enrollment_date, '%d/%m/%Y').date()
                                 except ValueError:
-                                    errors.append(f"Linha {idx}: Data de matrícula inválida (use YYYY-MM-DD)")
-                                    continue
+                                    try:
+                                        enrollment_date = datetime.strptime(enrollment_date, '%Y-%m-%d').date()
+                                    except ValueError:
+                                        errors.append(f"Linha {idx}: Data de matrícula inválida (use DD/MM/YYYY ou YYYY-MM-DD)")
+                                        continue
+                            # Se for datetime do Excel, converte para date
+                            elif hasattr(enrollment_date, 'date'):
+                                enrollment_date = enrollment_date.date()
                         else:
                             enrollment_date = datetime.now().date()
-
-                        student_status = row.get('status', 'enrolled').strip() or 'enrolled'
 
                         # Verifica se o aluno já existe (por matrícula)
                         student, created = TbStudents.objects.update_or_create(
@@ -236,7 +259,7 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                                 'student_name': student_name,
                                 'id_class': class_obj,
                                 'enrollment_date': enrollment_date,
-                                'status': student_status
+                                'status': 'enrolled'
                             }
                         )
 
