@@ -156,6 +156,16 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
             'situacao': 'status',
         }
 
+        # Mapeamento de status (português -> inglês)
+        STATUS_MAPPING = {
+            'matriculado': 'enrolled',
+            'transferido': 'transferred',
+            'formado': 'graduated',
+            'desistente': 'dropped',
+            'ativo': 'active',
+            'inativo': 'inactive',
+        }
+
         def normalize_column_name(column):
             """Normaliza o nome da coluna para o padrão em inglês"""
             if not column:
@@ -170,6 +180,21 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
 
             # Busca no mapeamento
             return COLUMN_MAPPING.get(normalized, normalized)
+
+        def normalize_status(status_value):
+            """Normaliza o status para o padrão em inglês"""
+            if not status_value:
+                return 'enrolled'  # Padrão
+
+            # Remove espaços extras e converte para minúsculas
+            normalized = str(status_value).strip().lower()
+
+            # Se já está em inglês, retorna
+            if normalized in ['enrolled', 'transferred', 'graduated', 'dropped', 'active', 'inactive']:
+                return normalized
+
+            # Busca no mapeamento PT -> EN
+            return STATUS_MAPPING.get(normalized, normalized)
 
         def find_class_by_name_or_id(value):
             """Busca turma por nome ou ID"""
@@ -318,11 +343,8 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                         else:
                             enrollment_date = datetime.now().date()
 
-                        student_status = row.get('status', 'enrolled')
-                        if student_status:
-                            student_status = str(student_status).strip() or 'enrolled'
-                        else:
-                            student_status = 'enrolled'
+                        # Normaliza o status (aceita PT ou EN)
+                        student_status = normalize_status(row.get('status'))
 
                         # Verifica se o aluno já existe (por matrícula)
                         student, created = TbStudents.objects.update_or_create(

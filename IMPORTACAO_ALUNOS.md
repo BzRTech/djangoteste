@@ -15,6 +15,12 @@ Agora você pode usar nomes de colunas em **português** ou **inglês**. O siste
 - `Data de Matrícula` / `Data` → `enrollment_date`
 - `Status` / `Situação` → `status`
 
+**Mapeamento de status (aceita português ou inglês):**
+- `Matriculado` → `enrolled`
+- `Transferido` → `transferred`
+- `Formado` → `graduated`
+- `Desistente` → `dropped`
+
 ### ✅ Busca de Turma por Nome
 Agora você pode usar o **nome da turma** em vez do ID numérico!
 
@@ -34,9 +40,9 @@ O sistema tenta encontrar a turma de várias formas:
 ### Exemplo com Nomes em Português (Recomendado)
 ```csv
 Nome do Aluno,Matrícula,Turma,Data de Matrícula,Status
-João Pedro Silva,2001,5º Ano A,2024-01-15,enrolled
-Maria Eduarda Santos,2002,5º Ano A,2024-01-15,enrolled
-Pedro Henrique Oliveira,2003,5º Ano B,2024-01-15,enrolled
+João Pedro Silva,2001,5º Ano A,2024-01-15,Matriculado
+Maria Eduarda Santos,2002,5º Ano A,2024-01-15,Matriculado
+Pedro Henrique Oliveira,2003,5º Ano B,2024-01-15,Transferido
 ```
 
 ### Exemplo com Nomes em Inglês (Compatível)
@@ -54,7 +60,7 @@ Maria Eduarda Santos,2002,1,2024-01-15,enrolled
 | **Matrícula** | ✅ Sim | Número | Número único de matrícula |
 | **Turma** | ✅ Sim | Texto ou Número | Nome da turma (ex: "5º Ano A") ou ID |
 | **Data de Matrícula** | ❌ Não | YYYY-MM-DD | Data de matrícula (padrão: data atual) |
-| **Status** | ❌ Não | Texto | Status do aluno (padrão: "enrolled") |
+| **Status** | ❌ Não | Texto | Status: Matriculado, Transferido, Formado ou Desistente (padrão: "Matriculado") |
 
 ## Como Usar
 

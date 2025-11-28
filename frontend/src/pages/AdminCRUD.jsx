@@ -592,10 +592,22 @@ const StudentsTable = ({ data, onEdit, onDelete }) => (
                 className={`px-2 py-1 rounded-full text-xs ${
                   student.status === "enrolled"
                     ? "bg-green-100 text-green-800"
+                    : student.status === "transferred"
+                    ? "bg-blue-100 text-blue-800"
+                    : student.status === "graduated"
+                    ? "bg-purple-100 text-purple-800"
                     : "bg-gray-100 text-gray-800"
                 }`}
               >
-                {student.status}
+                {student.status === "enrolled"
+                  ? "Matriculado"
+                  : student.status === "transferred"
+                  ? "Transferido"
+                  : student.status === "graduated"
+                  ? "Formado"
+                  : student.status === "dropped"
+                  ? "Desistente"
+                  : student.status}
               </span>
             </td>
             <td className="px-6 py-4 text-sm text-right">
@@ -1392,9 +1404,9 @@ const ImportStudents = ({ onImportSuccess }) => {
 
   const downloadTemplate = () => {
     const csvContent = `Nome do Aluno,Matrícula,Turma,Data de Matrícula,Status
-João Silva,12345,5º Ano A,2025-01-15,enrolled
-Maria Santos,12346,5º Ano A,2025-01-15,enrolled
-Pedro Oliveira,12347,5º Ano B,2025-01-15,enrolled`;
+João Silva,12345,5º Ano A,2025-01-15,Matriculado
+Maria Santos,12346,5º Ano A,2025-01-15,Matriculado
+Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
