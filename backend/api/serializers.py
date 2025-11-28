@@ -42,12 +42,14 @@ class TbSchoolSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TbSchool
-        fields = ['id', 'school', 'director_name', 'id_city', 'city_name', 'state', 'address', 'created_at']
+        fields = ['id', 'school', 'director_name', 'id_city', 'city_name', 'state', 'address', 'created_at', 'codigo_ideb']
         extra_kwargs = {
             'id_city': {'required': False, 'allow_null': True},
             'director_name': {'required': False, 'allow_blank': True, 'allow_null': True},
             'address': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'codigo_ideb': {'required': False, 'allow_blank': True, 'allow_null': True},  # ← Adicionar
         }
+        
 
 
 class TbTeacherSubjectSerializer(serializers.ModelSerializer):

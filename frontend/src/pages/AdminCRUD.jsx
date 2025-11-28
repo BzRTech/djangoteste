@@ -222,11 +222,10 @@ const AdminCRUD = () => {
                     setActiveTab(tab.id);
                     setShowForm(false);
                   }}
-                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                    isActive
+                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${isActive
                       ? "border-b-2 border-blue-600 text-blue-600"
                       : "text-gray-600 hover:text-gray-800"
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   {tab.label}
@@ -248,9 +247,8 @@ const AdminCRUD = () => {
                   </h2>
                   <button
                     onClick={handleNew}
-                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors ${
-                      colorClasses[tabs.find((t) => t.id === activeTab)?.color]
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors ${colorClasses[tabs.find((t) => t.id === activeTab)?.color]
+                      }`}
                   >
                     <Plus className="w-5 h-5" />
                     Adicionar
@@ -351,6 +349,9 @@ const SchoolsTable = ({ data, onEdit, onDelete }) => (
       <thead className="bg-gray-50">
         <tr>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+            Código IDEB
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
             Escola
           </th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -370,6 +371,9 @@ const SchoolsTable = ({ data, onEdit, onDelete }) => (
       <tbody className="divide-y divide-gray-200">
         {data.map((school) => (
           <tr key={school.id} className="hover:bg-gray-50">
+            <td className="px-6 py-4 text-sm font-medium text-gray-900">
+              {school.codigo_ideb || "-"}
+            </td>
             <td className="px-6 py-4 text-sm font-medium text-gray-900">
               {school.school}
             </td>
@@ -436,11 +440,10 @@ const TeachersTable = ({ data, onEdit, onDelete }) => (
             </td>
             <td className="px-6 py-4 text-sm">
               <span
-                className={`px-2 py-1 rounded-full text-xs ${
-                  teacher.status === "active"
+                className={`px-2 py-1 rounded-full text-xs ${teacher.status === "active"
                     ? "bg-green-100 text-green-800"
                     : "bg-gray-100 text-gray-800"
-                }`}
+                  }`}
               >
                 {teacher.status === "active" ? "Ativo" : "Inativo"}
               </span>
@@ -448,7 +451,7 @@ const TeachersTable = ({ data, onEdit, onDelete }) => (
             <td className="px-6 py-4 text-sm">
               <div className="flex flex-wrap gap-1">
                 {teacher.subject_details &&
-                teacher.subject_details.length > 0 ? (
+                  teacher.subject_details.length > 0 ? (
                   teacher.subject_details.map((subject, index) => (
                     <span
                       key={index}
@@ -589,25 +592,24 @@ const StudentsTable = ({ data, onEdit, onDelete }) => (
             </td>
             <td className="px-6 py-4 text-sm">
               <span
-                className={`px-2 py-1 rounded-full text-xs ${
-                  student.status === "enrolled"
+                className={`px-2 py-1 rounded-full text-xs ${student.status === "enrolled"
                     ? "bg-green-100 text-green-800"
                     : student.status === "transferred"
-                    ? "bg-blue-100 text-blue-800"
-                    : student.status === "graduated"
-                    ? "bg-purple-100 text-purple-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
+                      ? "bg-blue-100 text-blue-800"
+                      : student.status === "graduated"
+                        ? "bg-purple-100 text-purple-800"
+                        : "bg-gray-100 text-gray-800"
+                  }`}
               >
                 {student.status === "enrolled"
                   ? "Matriculado"
                   : student.status === "transferred"
-                  ? "Transferido"
-                  : student.status === "graduated"
-                  ? "Formado"
-                  : student.status === "dropped"
-                  ? "Desistente"
-                  : student.status}
+                    ? "Transferido"
+                    : student.status === "graduated"
+                      ? "Formado"
+                      : student.status === "dropped"
+                        ? "Desistente"
+                        : student.status}
               </span>
             </td>
             <td className="px-6 py-4 text-sm text-right">
@@ -641,6 +643,7 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
     director_name: item?.director_name || "",
     id_city: item?.id_city || "",
     address: item?.address || "",
+    codigo_ideb: item?.codigo_ideb || "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -680,6 +683,18 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
       <h3 className="text-xl font-bold mb-4">
         {item ? "Editar" : "Nova"} Escola
       </h3>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Código IDEB
+        </label>
+        <input
+          type="text"
+          value={formData.codigo_ideb}
+          onChange={(e) => setFormData({ ...formData, codigo_ideb: e.target.value })}
+          placeholder="Ex: 12345678"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1328,17 +1343,37 @@ const ImportStudents = ({ onImportSuccess }) => {
   const [selectedSchool, setSelectedSchool] = useState("");
   const [loadingSchools, setLoadingSchools] = useState(true);
 
-  // Carrega as escolas ao montar o componente
+  // Carrega TODAS as escolas ao montar o componente (percorre todas as páginas)
   useEffect(() => {
-    const fetchSchools = async () => {
+    const fetchAllSchools = async () => {
       try {
         setLoadingSchools(true);
-        const response = await fetch(`${API_BASE_URL}/schools/`);
-        const data = await response.json();
-        const schoolsList = Array.isArray(data) ? data : data.results || [];
-        setSchools(schoolsList);
-        if (schoolsList.length > 0) {
-          setSelectedSchool(schoolsList[0].id);
+        let allSchools = [];
+        let page = 1;
+        let hasMore = true;
+
+        // Busca todas as páginas de escolas
+        while (hasMore) {
+          const response = await fetch(`${API_BASE_URL}/schools/?page=${page}`);
+          const data = await response.json();
+          const schoolsList = Array.isArray(data) ? data : data.results || [];
+
+          if (schoolsList.length === 0) {
+            hasMore = false;
+          } else {
+            allSchools = [...allSchools, ...schoolsList];
+            // Se não tem próxima página, para o loop
+            if (!data.next) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          }
+        }
+
+        setSchools(allSchools);
+        if (allSchools.length > 0) {
+          setSelectedSchool(allSchools[0].id);
         }
       } catch (error) {
         console.error("Erro ao carregar escolas:", error);
@@ -1346,7 +1381,7 @@ const ImportStudents = ({ onImportSuccess }) => {
         setLoadingSchools(false);
       }
     };
-    fetchSchools();
+    fetchAllSchools();
   }, []);
 
   const handleDrag = (e) => {
@@ -1558,20 +1593,18 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
 
       {/* Upload Area */}
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-          dragActive
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
             ? "border-indigo-500 bg-indigo-50"
             : "border-gray-300 bg-white"
-        }`}
+          }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
       >
         <Upload
-          className={`w-12 h-12 mx-auto mb-4 ${
-            dragActive ? "text-indigo-600" : "text-gray-400"
-          }`}
+          className={`w-12 h-12 mx-auto mb-4 ${dragActive ? "text-indigo-600" : "text-gray-400"
+            }`}
         />
         <p className="text-lg font-medium text-gray-700 mb-2">
           {file
@@ -1633,11 +1666,10 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
       {/* Result */}
       {result && (
         <div
-          className={`mt-6 p-4 rounded-lg border ${
-            result.success
+          className={`mt-6 p-4 rounded-lg border ${result.success
               ? "bg-green-50 border-green-200"
               : "bg-red-50 border-red-200"
-          }`}
+            }`}
         >
           <div className="flex items-start gap-3">
             {result.success ? (
@@ -1647,16 +1679,14 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
             )}
             <div className="flex-1">
               <h3
-                className={`font-semibold mb-1 ${
-                  result.success ? "text-green-900" : "text-red-900"
-                }`}
+                className={`font-semibold mb-1 ${result.success ? "text-green-900" : "text-red-900"
+                  }`}
               >
                 {result.success ? "Importação concluída!" : "Erro na importação"}
               </h3>
               <p
-                className={`text-sm mb-2 ${
-                  result.success ? "text-green-700" : "text-red-700"
-                }`}
+                className={`text-sm mb-2 ${result.success ? "text-green-700" : "text-red-700"
+                  }`}
               >
                 {result.message}
               </p>

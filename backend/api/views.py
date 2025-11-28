@@ -27,7 +27,7 @@ class TbSchoolViewSet(viewsets.ModelViewSet):
     serializer_class = TbSchoolSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['id_city', 'id_city__state']
-    search_fields = ['school', 'director_name', 'address']
+    search_fields = ['school', 'director_name', 'address', 'codigo_ideb']
 
 
 class TbTeacherViewSet(viewsets.ModelViewSet):

@@ -28,6 +28,7 @@ class TbSchool(models.Model):
     id_city = models.ForeignKey(TbCity, on_delete=models.DO_NOTHING, db_column='id_city')
     address = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    codigo_ideb = models.CharField(max_length=50, blank=True, null=True)  # ✅ Novo campo
 
     class Meta:
         managed = False
