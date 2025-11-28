@@ -196,19 +196,24 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
             # Busca no mapeamento PT -> EN
             return STATUS_MAPPING.get(normalized, normalized)
 
-        def find_class_by_name_or_id(value):
-            """Busca turma por nome ou ID"""
+        def find_class_by_name_or_id(value, school_id=None):
+            """Busca turma por nome ou ID, opcionalmente filtrando por escola"""
             if not value:
                 return None, "Valor da turma não fornecido"
 
             # Remove espaços extras
             value = str(value).strip()
 
+            # Base queryset - filtra por escola se fornecido
+            base_queryset = TbClass.objects.all()
+            if school_id:
+                base_queryset = base_queryset.filter(id_school_id=school_id)
+
             # Tenta primeiro como ID numérico
             try:
                 class_id = int(value)
                 try:
-                    return TbClass.objects.get(id=class_id), None
+                    return base_queryset.get(id=class_id), None
                 except TbClass.DoesNotExist:
                     pass  # Continua para tentar por nome
             except (ValueError, TypeError):
@@ -216,12 +221,12 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
 
             # Tenta buscar por nome exato
             try:
-                return TbClass.objects.get(class_name__iexact=value), None
+                return base_queryset.get(class_name__iexact=value), None
             except TbClass.DoesNotExist:
                 pass
 
             # Tenta buscar por nome parcial (case insensitive)
-            classes = TbClass.objects.filter(class_name__icontains=value)
+            classes = base_queryset.filter(class_name__icontains=value)
             if classes.count() == 1:
                 return classes.first(), None
             elif classes.count() > 1:
@@ -233,7 +238,7 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
             if match:
                 grade_num = match.group(1)
                 # Busca por grade que contenha esse número
-                classes = TbClass.objects.filter(
+                classes = base_queryset.filter(
                     Q(grade__icontains=f"{grade_num}º") |
                     Q(grade__icontains=f"{grade_num}°") |
                     Q(class_name__icontains=value)
@@ -244,11 +249,31 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                     class_names = ", ".join([c.class_name for c in classes[:3]])
                     return None, f"Múltiplas turmas encontradas: {class_names}"
 
-            return None, f"Turma '{value}' não encontrada"
+            school_msg = f" na escola selecionada" if school_id else ""
+            return None, f"Turma '{value}' não encontrada{school_msg}"
 
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'Nenhum arquivo enviado'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtém o school_id do request (opcional)
+        school_id = request.data.get('school_id')
+        if school_id:
+            try:
+                school_id = int(school_id)
+                # Valida se a escola existe
+                try:
+                    TbSchool.objects.get(id=school_id)
+                except TbSchool.DoesNotExist:
+                    return Response(
+                        {'error': f'Escola com ID {school_id} não encontrada'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError):
+                return Response(
+                    {'error': 'ID da escola inválido'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         # Verifica extensão do arquivo
         file_extension = file.name.split('.')[-1].lower()
@@ -326,8 +351,8 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                             errors.append(f"Linha {idx}: Matrícula deve ser um número")
                             continue
 
-                        # Busca a turma por nome ou ID
-                        class_obj, error = find_class_by_name_or_id(class_value)
+                        # Busca a turma por nome ou ID (filtrando por escola se fornecido)
+                        class_obj, error = find_class_by_name_or_id(class_value, school_id)
                         if not class_obj:
                             errors.append(f"Linha {idx} ({student_name}): {error}")
                             missing_classes.add(str(class_value))
@@ -368,10 +393,13 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                         errors.append(f"Linha {idx}: {str(e)}")
                         continue
 
-            # Se houver turmas não encontradas, lista as turmas disponíveis
+            # Se houver turmas não encontradas, lista as turmas disponíveis (filtradas por escola se fornecido)
             available_classes = None
             if missing_classes:
-                all_classes = TbClass.objects.all().values('id', 'class_name', 'grade')
+                classes_query = TbClass.objects.all()
+                if school_id:
+                    classes_query = classes_query.filter(id_school_id=school_id)
+                all_classes = classes_query.values('id', 'class_name', 'grade')
                 available_classes = [
                     {
                         'id': c['id'],
@@ -393,7 +421,8 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
             if missing_classes:
                 response_data['missing_classes'] = list(missing_classes)
                 response_data['available_classes'] = available_classes
-                response_data['suggestion'] = 'Algumas turmas não foram encontradas. Verifique se as turmas existem no sistema antes de importar os alunos.'
+                school_filter_msg = f" na escola selecionada" if school_id else ""
+                response_data['suggestion'] = f'Algumas turmas não foram encontradas{school_filter_msg}. Verifique se as turmas existem no sistema antes de importar os alunos.'
 
             return Response(response_data, status=status.HTTP_201_CREATED if students_created else status.HTTP_200_OK)
 
