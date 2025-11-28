@@ -1324,6 +1324,30 @@ const ImportStudents = ({ onImportSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [schools, setSchools] = useState([]);
+  const [selectedSchool, setSelectedSchool] = useState("");
+  const [loadingSchools, setLoadingSchools] = useState(true);
+
+  // Carrega as escolas ao montar o componente
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        setLoadingSchools(true);
+        const response = await fetch(`${API_BASE_URL}/schools/`);
+        const data = await response.json();
+        const schoolsList = Array.isArray(data) ? data : data.results || [];
+        setSchools(schoolsList);
+        if (schoolsList.length > 0) {
+          setSelectedSchool(schoolsList[0].id);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar escolas:", error);
+      } finally {
+        setLoadingSchools(false);
+      }
+    };
+    fetchSchools();
+  }, []);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -1359,11 +1383,17 @@ const ImportStudents = ({ onImportSuccess }) => {
       return;
     }
 
+    if (!selectedSchool) {
+      alert("Por favor, selecione uma escola");
+      return;
+    }
+
     setUploading(true);
     setResult(null);
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("school_id", selectedSchool);
 
     try {
       const response = await fetch(
@@ -1487,6 +1517,43 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
             quanto em inglês nas colunas. O sistema aceita ambos os formatos!
           </p>
         </div>
+      </div>
+
+      {/* Seleção de Escola */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+        <label className="block text-sm font-semibold text-gray-900 mb-2">
+          <School className="w-4 h-4 inline-block mr-2 mb-1" />
+          Selecione a Escola
+        </label>
+        <p className="text-sm text-gray-600 mb-3">
+          Escolha a escola para a qual deseja importar os alunos. As turmas serão filtradas por esta escola.
+        </p>
+        {loadingSchools ? (
+          <div className="flex items-center justify-center py-3">
+            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            <span className="ml-2 text-gray-600">Carregando escolas...</span>
+          </div>
+        ) : schools.length === 0 ? (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 inline-block mr-2" />
+            <span className="text-sm text-yellow-800">
+              Nenhuma escola cadastrada. Cadastre escolas antes de importar alunos.
+            </span>
+          </div>
+        ) : (
+          <select
+            value={selectedSchool}
+            onChange={(e) => setSelectedSchool(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="">Selecione uma escola...</option>
+            {schools.map((school) => (
+              <option key={school.id} value={school.id}>
+                {school.school}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Upload Area */}
