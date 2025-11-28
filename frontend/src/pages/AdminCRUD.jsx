@@ -592,10 +592,22 @@ const StudentsTable = ({ data, onEdit, onDelete }) => (
                 className={`px-2 py-1 rounded-full text-xs ${
                   student.status === "enrolled"
                     ? "bg-green-100 text-green-800"
+                    : student.status === "transferred"
+                    ? "bg-blue-100 text-blue-800"
+                    : student.status === "graduated"
+                    ? "bg-purple-100 text-purple-800"
                     : "bg-gray-100 text-gray-800"
                 }`}
               >
-                {student.status}
+                {student.status === "enrolled"
+                  ? "Matriculado"
+                  : student.status === "transferred"
+                  ? "Transferido"
+                  : student.status === "graduated"
+                  ? "Formado"
+                  : student.status === "dropped"
+                  ? "Desistente"
+                  : student.status}
               </span>
             </td>
             <td className="px-6 py-4 text-sm text-right">
@@ -1391,10 +1403,10 @@ const ImportStudents = ({ onImportSuccess }) => {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `student_name,student_serial,id_class,enrollment_date,status
-João Silva,12345,1,2025-01-15,enrolled
-Maria Santos,12346,1,2025-01-15,enrolled
-Pedro Oliveira,12347,2,2025-01-15,enrolled`;
+    const csvContent = `Nome do Aluno,Matrícula,Turma,Data de Matrícula,Status
+João Silva,12345,5º Ano A,2025-01-15,Matriculado
+Maria Santos,12346,5º Ano A,2025-01-15,Matriculado
+Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -1448,24 +1460,30 @@ Pedro Oliveira,12347,2,2025-01-15,enrolled`;
         </h3>
         <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
           <li>
-            <strong>student_name</strong>: Nome do aluno (obrigatório)
+            <strong>Nome do Aluno</strong>: Nome completo do aluno (obrigatório)
           </li>
           <li>
-            <strong>student_serial</strong>: Matrícula do aluno (obrigatório,
+            <strong>Matrícula</strong>: Número de matrícula do aluno (obrigatório,
             número único)
           </li>
           <li>
-            <strong>id_class</strong>: ID da turma (obrigatório, número)
+            <strong>Turma</strong>: Nome da turma (ex: "5º Ano A") ou ID da turma (obrigatório)
           </li>
           <li>
-            <strong>enrollment_date</strong>: Data de matrícula (opcional,
+            <strong>Data de Matrícula</strong>: Data de matrícula (opcional,
             formato YYYY-MM-DD)
           </li>
           <li>
-            <strong>status</strong>: Status do aluno (opcional, padrão:
+            <strong>Status</strong>: Status do aluno (opcional, padrão:
             enrolled)
           </li>
         </ul>
+        <div className="mt-3 pt-3 border-t border-gray-300">
+          <p className="text-xs text-gray-600">
+            <strong>💡 Dica:</strong> Você pode usar tanto os nomes em português
+            quanto em inglês nas colunas. O sistema aceita ambos os formatos!
+          </p>
+        </div>
       </div>
 
       {/* Upload Area */}

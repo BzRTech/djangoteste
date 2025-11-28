@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
-from django.db.models import Count, Avg, Max, Min
+from django.db.models import Count, Avg, Max, Min, Q
 
 from students.models import *
 from .serializers import *
@@ -127,16 +127,124 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
         """
         Importa múltiplos estudantes via upload de arquivo CSV/Excel
 
-        Formato esperado do arquivo:
-        - student_name: Nome do aluno (obrigatório)
-        - student_serial: Matrícula (obrigatório)
-        - id_class: ID da turma (obrigatório)
-        - enrollment_date: Data de matrícula (opcional, formato YYYY-MM-DD)
-        - status: Status (opcional, padrão: enrolled)
+        Formato esperado do arquivo (aceita português ou inglês):
+        - Nome do Aluno / student_name: Nome do aluno (obrigatório)
+        - Matrícula / student_serial: Matrícula (obrigatório)
+        - Turma / id_class: Nome ou ID da turma (obrigatório)
+        - Data de Matrícula / enrollment_date: Data de matrícula (opcional, formato YYYY-MM-DD)
+        - Status / status: Status (opcional, padrão: enrolled)
         """
         import csv
         import io
         from datetime import datetime
+        import re
+
+        # Mapeamento de nomes de colunas (português -> inglês)
+        COLUMN_MAPPING = {
+            'nome do aluno': 'student_name',
+            'nome': 'student_name',
+            'aluno': 'student_name',
+            'matrícula': 'student_serial',
+            'matricula': 'student_serial',
+            'turma': 'id_class',
+            'classe': 'id_class',
+            'data de matrícula': 'enrollment_date',
+            'data de matricula': 'enrollment_date',
+            'data': 'enrollment_date',
+            'status': 'status',
+            'situação': 'status',
+            'situacao': 'status',
+        }
+
+        # Mapeamento de status (português -> inglês)
+        STATUS_MAPPING = {
+            'matriculado': 'enrolled',
+            'transferido': 'transferred',
+            'formado': 'graduated',
+            'desistente': 'dropped',
+            'ativo': 'active',
+            'inativo': 'inactive',
+        }
+
+        def normalize_column_name(column):
+            """Normaliza o nome da coluna para o padrão em inglês"""
+            if not column:
+                return None
+
+            # Remove espaços extras e converte para minúsculas
+            normalized = column.strip().lower()
+
+            # Se já está em inglês, retorna
+            if normalized in ['student_name', 'student_serial', 'id_class', 'enrollment_date', 'status']:
+                return normalized
+
+            # Busca no mapeamento
+            return COLUMN_MAPPING.get(normalized, normalized)
+
+        def normalize_status(status_value):
+            """Normaliza o status para o padrão em inglês"""
+            if not status_value:
+                return 'enrolled'  # Padrão
+
+            # Remove espaços extras e converte para minúsculas
+            normalized = str(status_value).strip().lower()
+
+            # Se já está em inglês, retorna
+            if normalized in ['enrolled', 'transferred', 'graduated', 'dropped', 'active', 'inactive']:
+                return normalized
+
+            # Busca no mapeamento PT -> EN
+            return STATUS_MAPPING.get(normalized, normalized)
+
+        def find_class_by_name_or_id(value):
+            """Busca turma por nome ou ID"""
+            if not value:
+                return None, "Valor da turma não fornecido"
+
+            # Remove espaços extras
+            value = str(value).strip()
+
+            # Tenta primeiro como ID numérico
+            try:
+                class_id = int(value)
+                try:
+                    return TbClass.objects.get(id=class_id), None
+                except TbClass.DoesNotExist:
+                    pass  # Continua para tentar por nome
+            except (ValueError, TypeError):
+                pass  # Não é um número, tenta por nome
+
+            # Tenta buscar por nome exato
+            try:
+                return TbClass.objects.get(class_name__iexact=value), None
+            except TbClass.DoesNotExist:
+                pass
+
+            # Tenta buscar por nome parcial (case insensitive)
+            classes = TbClass.objects.filter(class_name__icontains=value)
+            if classes.count() == 1:
+                return classes.first(), None
+            elif classes.count() > 1:
+                class_names = ", ".join([c.class_name for c in classes[:3]])
+                return None, f"Múltiplas turmas encontradas para '{value}': {class_names}"
+
+            # Tenta extrair ano e turma (ex: "5º Ano A", "ano: 5º ano")
+            match = re.search(r'(\d+)[º°]?\s*(?:ano)?', value.lower())
+            if match:
+                grade_num = match.group(1)
+                # Busca por grade que contenha esse número
+                classes = TbClass.objects.filter(
+                    Q(grade__icontains=f"{grade_num}º") |
+                    Q(grade__icontains=f"{grade_num}°") |
+                    Q(class_name__icontains=value)
+                )
+                if classes.count() == 1:
+                    return classes.first(), None
+                elif classes.count() > 1:
+                    class_names = ", ".join([c.class_name for c in classes[:3]])
+                    return None, f"Múltiplas turmas encontradas: {class_names}"
+
+            return None, f"Turma '{value}' não encontrada"
 
         file = request.FILES.get('file')
         if not file:
@@ -175,18 +283,28 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
             if not rows:
                 return Response({'error': 'Arquivo vazio'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Normaliza os nomes das colunas na primeira linha
+            normalized_rows = []
+            for row in rows:
+                normalized_row = {}
+                for key, value in row.items():
+                    normalized_key = normalize_column_name(key)
+                    if normalized_key:
+                        normalized_row[normalized_key] = value
+                normalized_rows.append(normalized_row)
+
             # Valida e processa os dados
             students_created = []
             students_updated = []
             errors = []
 
             with transaction.atomic():
-                for idx, row in enumerate(rows, start=2):
+                for idx, row in enumerate(normalized_rows, start=2):
                     try:
                         # Validação dos campos obrigatórios
-                        student_name = row.get('student_name', '').strip()
+                        student_name = row.get('student_name', '').strip() if row.get('student_name') else ''
                         student_serial = row.get('student_serial')
-                        id_class = row.get('id_class')
+                        class_value = row.get('id_class')
 
                         if not student_name:
                             errors.append(f"Linha {idx}: Nome do aluno é obrigatório")
@@ -196,23 +314,21 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                             errors.append(f"Linha {idx}: Matrícula é obrigatória")
                             continue
 
-                        if not id_class:
-                            errors.append(f"Linha {idx}: ID da turma é obrigatório")
+                        if not class_value:
+                            errors.append(f"Linha {idx}: Turma é obrigatória")
                             continue
 
-                        # Converte tipos
+                        # Converte matrícula para inteiro
                         try:
                             student_serial = int(student_serial)
-                            id_class = int(id_class)
                         except (ValueError, TypeError):
-                            errors.append(f"Linha {idx}: Matrícula e ID da turma devem ser números")
+                            errors.append(f"Linha {idx}: Matrícula deve ser um número")
                             continue
 
-                        # Verifica se a turma existe
-                        try:
-                            class_obj = TbClass.objects.get(id=id_class)
-                        except TbClass.DoesNotExist:
-                            errors.append(f"Linha {idx}: Turma com ID {id_class} não encontrada")
+                        # Busca a turma por nome ou ID
+                        class_obj, error = find_class_by_name_or_id(class_value)
+                        if not class_obj:
+                            errors.append(f"Linha {idx}: {error}")
                             continue
 
                         # Processa campos opcionais
@@ -227,7 +343,8 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                         else:
                             enrollment_date = datetime.now().date()
 
-                        student_status = row.get('status', 'enrolled').strip() or 'enrolled'
+                        # Normaliza o status (aceita PT ou EN)
+                        student_status = normalize_status(row.get('status'))
 
                         # Verifica se o aluno já existe (por matrícula)
                         student, created = TbStudents.objects.update_or_create(
