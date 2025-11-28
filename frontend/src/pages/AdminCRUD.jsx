@@ -1383,6 +1383,9 @@ const ImportStudents = ({ onImportSuccess }) => {
           created: data.created,
           updated: data.updated,
           errors: data.errors,
+          missing_classes: data.missing_classes,
+          available_classes: data.available_classes,
+          suggestion: data.suggestion,
         });
         setFile(null);
         onImportSuccess();
@@ -1612,6 +1615,41 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
                       <li key={idx}>{error}</li>
                     ))}
                   </ul>
+
+                  {result.suggestion && (
+                    <div className="mt-3 p-2 bg-yellow-100 border border-yellow-300 rounded">
+                      <p className="text-xs text-yellow-900 font-medium">
+                        💡 {result.suggestion}
+                      </p>
+                    </div>
+                  )}
+
+                  {result.missing_classes && result.missing_classes.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-yellow-900 mb-2">
+                        Turmas não encontradas: {result.missing_classes.join(', ')}
+                      </p>
+                      {result.available_classes && result.available_classes.length > 0 && (
+                        <>
+                          <p className="text-xs text-yellow-800 mb-2">
+                            Turmas disponíveis no sistema:
+                          </p>
+                          <div className="max-h-32 overflow-y-auto bg-white rounded p-2 border border-yellow-200">
+                            <ul className="text-xs text-gray-700 space-y-1">
+                              {result.available_classes.map((cls) => (
+                                <li key={cls.id} className="flex items-center gap-2">
+                                  <span className="font-medium">{cls.name}</span>
+                                  {cls.grade && (
+                                    <span className="text-gray-500">({cls.grade})</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

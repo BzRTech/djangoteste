@@ -297,6 +297,7 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
             students_created = []
             students_updated = []
             errors = []
+            missing_classes = set()  # Rastreia turmas não encontradas
 
             with transaction.atomic():
                 for idx, row in enumerate(normalized_rows, start=2):
@@ -328,7 +329,8 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                         # Busca a turma por nome ou ID
                         class_obj, error = find_class_by_name_or_id(class_value)
                         if not class_obj:
-                            errors.append(f"Linha {idx}: {error}")
+                            errors.append(f"Linha {idx} ({student_name}): {error}")
+                            missing_classes.add(str(class_value))
                             continue
 
                         # Processa campos opcionais
@@ -366,13 +368,34 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
                         errors.append(f"Linha {idx}: {str(e)}")
                         continue
 
-            return Response({
+            # Se houver turmas não encontradas, lista as turmas disponíveis
+            available_classes = None
+            if missing_classes:
+                all_classes = TbClass.objects.all().values('id', 'class_name', 'grade')
+                available_classes = [
+                    {
+                        'id': c['id'],
+                        'name': c['class_name'],
+                        'grade': c['grade']
+                    }
+                    for c in all_classes
+                ]
+
+            response_data = {
                 'success': True,
                 'message': f'{len(students_created)} alunos criados, {len(students_updated)} alunos atualizados',
                 'created': len(students_created),
                 'updated': len(students_updated),
                 'errors': errors if errors else None
-            }, status=status.HTTP_201_CREATED if students_created else status.HTTP_200_OK)
+            }
+
+            # Adiciona informações extras quando houver erros
+            if missing_classes:
+                response_data['missing_classes'] = list(missing_classes)
+                response_data['available_classes'] = available_classes
+                response_data['suggestion'] = 'Algumas turmas não foram encontradas. Verifique se as turmas existem no sistema antes de importar os alunos.'
+
+            return Response(response_data, status=status.HTTP_201_CREATED if students_created else status.HTTP_200_OK)
 
         except Exception as e:
             return Response(
