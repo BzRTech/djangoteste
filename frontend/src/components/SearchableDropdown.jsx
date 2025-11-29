@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search, X, Loader2 } from 'lucide-react';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
+
 /**
  * Componente Dropdown com pesquisa reutilizável
  *
  * @param {Object} props
  * @param {Array} props.options - Array de objetos com {value, label} ou array customizado
+ * @param {string} props.apiEndpoint - Endpoint da API para carregar dados automaticamente (ex: '/cities/')
  * @param {string|number} props.value - Valor selecionado
  * @param {Function} props.onChange - Callback quando o valor muda
  * @param {string} props.placeholder - Texto placeholder
- * @param {boolean} props.loading - Estado de carregamento
  * @param {boolean} props.disabled - Desabilitar o componente
  * @param {string} props.error - Mensagem de erro
  * @param {string} props.label - Label do campo
@@ -19,13 +21,14 @@ import { ChevronDown, Search, X, Loader2 } from 'lucide-react';
  * @param {string} props.searchPlaceholder - Placeholder do campo de pesquisa
  * @param {string} props.emptyMessage - Mensagem quando não há resultados
  * @param {string} props.className - Classes CSS adicionais
+ * @param {Function} props.onDataLoaded - Callback quando os dados da API forem carregados (opcional)
  */
 const SearchableDropdown = ({
-  options = [],
+  options: externalOptions = [],
+  apiEndpoint = null,
   value,
   onChange,
   placeholder = 'Selecione...',
-  loading = false,
   disabled = false,
   error = '',
   label = '',
@@ -35,11 +38,63 @@ const SearchableDropdown = ({
   searchPlaceholder = 'Pesquisar...',
   emptyMessage = 'Nenhum resultado encontrado',
   className = '',
+  onDataLoaded = null,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [internalOptions, setInternalOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
+
+  // Usar options externas ou internas (carregadas da API)
+  const options = apiEndpoint ? internalOptions : externalOptions;
+
+  // Carregar dados da API se apiEndpoint foi fornecido
+  useEffect(() => {
+    if (!apiEndpoint) return;
+
+    const fetchAllData = async () => {
+      setLoading(true);
+      try {
+        let allData = [];
+        let page = 1;
+        let hasMore = true;
+
+        // Busca todas as páginas
+        while (hasMore) {
+          const response = await fetch(`${API_BASE_URL}${apiEndpoint}?page=${page}`);
+          const data = await response.json();
+          const dataList = Array.isArray(data) ? data : data.results || [];
+
+          if (dataList.length === 0) {
+            hasMore = false;
+          } else {
+            allData = [...allData, ...dataList];
+            // Se não tem próxima página, para o loop
+            if (!data.next) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          }
+        }
+
+        setInternalOptions(allData);
+
+        // Callback opcional quando dados são carregados
+        if (onDataLoaded) {
+          onDataLoaded(allData);
+        }
+      } catch (error) {
+        console.error(`Erro ao carregar dados de ${apiEndpoint}:`, error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, [apiEndpoint, onDataLoaded]);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
