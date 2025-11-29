@@ -125,11 +125,28 @@ const AdminCRUD = () => {
 
   const fetchCities = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/cities/`);
-      const citiesData = await response.json();
-      setCities(
-        Array.isArray(citiesData) ? citiesData : citiesData.results || []
-      );
+      let allCities = [];
+      let page = 1;
+      let hasMore = true;
+
+      // Busca todas as páginas de cidades
+      while (hasMore) {
+        const response = await fetch(`${API_BASE_URL}/cities/?page=${page}`);
+        const data = await response.json();
+        const citiesList = Array.isArray(data) ? data : data.results || [];
+        if (citiesList.length === 0) {
+          hasMore = false;
+        } else {
+          allCities = [...allCities, ...citiesList];
+          // Se não tem próxima página, para o loop
+          if (!data.next) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        }
+      }
+      setCities(allCities);
     } catch (error) {
       console.error("Erro ao carregar cidades:", error);
     }
@@ -224,8 +241,8 @@ const AdminCRUD = () => {
                     setShowForm(false);
                   }}
                   className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${isActive
-                      ? "border-b-2 border-blue-600 text-blue-600"
-                      : "text-gray-600 hover:text-gray-800"
+                    ? "border-b-2 border-blue-600 text-blue-600"
+                    : "text-gray-600 hover:text-gray-800"
                     }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -442,8 +459,8 @@ const TeachersTable = ({ data, onEdit, onDelete }) => (
             <td className="px-6 py-4 text-sm">
               <span
                 className={`px-2 py-1 rounded-full text-xs ${teacher.status === "active"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-gray-100 text-gray-800"
                   }`}
               >
                 {teacher.status === "active" ? "Ativo" : "Inativo"}
@@ -594,12 +611,12 @@ const StudentsTable = ({ data, onEdit, onDelete }) => (
             <td className="px-6 py-4 text-sm">
               <span
                 className={`px-2 py-1 rounded-full text-xs ${student.status === "enrolled"
-                    ? "bg-green-100 text-green-800"
-                    : student.status === "transferred"
-                      ? "bg-blue-100 text-blue-800"
-                      : student.status === "graduated"
-                        ? "bg-purple-100 text-purple-800"
-                        : "bg-gray-100 text-gray-800"
+                  ? "bg-green-100 text-green-800"
+                  : student.status === "transferred"
+                    ? "bg-blue-100 text-blue-800"
+                    : student.status === "graduated"
+                      ? "bg-purple-100 text-purple-800"
+                      : "bg-gray-100 text-gray-800"
                   }`}
               >
                 {student.status === "enrolled"
@@ -1181,7 +1198,7 @@ const ClassForm = ({ item, schools: initialSchools, teachers: initialTeachers, o
             options={[
               { value: 'morning', label: 'Manhã' },
               { value: 'afternoon', label: 'Tarde' },
-              { value: 'evening', label: 'Noite' }
+              { value: 'Integral', label: 'Integral' }
             ]}
             value={formData.shift}
             onChange={(value) => setFormData({ ...formData, shift: value })}
@@ -1675,8 +1692,8 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
       {/* Upload Area */}
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-gray-300 bg-white"
+          ? "border-indigo-500 bg-indigo-50"
+          : "border-gray-300 bg-white"
           }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -1748,8 +1765,8 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
       {result && (
         <div
           className={`mt-6 p-4 rounded-lg border ${result.success
-              ? "bg-green-50 border-green-200"
-              : "bg-red-50 border-red-200"
+            ? "bg-green-50 border-green-200"
+            : "bg-red-50 border-red-200"
             }`}
         >
           <div className="flex items-start gap-3">
