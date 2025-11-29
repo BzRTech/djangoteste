@@ -125,11 +125,30 @@ const AdminCRUD = () => {
 
   const fetchCities = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/cities/`);
-      const citiesData = await response.json();
-      setCities(
-        Array.isArray(citiesData) ? citiesData : citiesData.results || []
-      );
+      let allCities = [];
+      let page = 1;
+      let hasMore = true;
+
+      // Busca todas as páginas de cidades
+      while (hasMore) {
+        const response = await fetch(`${API_BASE_URL}/cities/?page=${page}`);
+        const data = await response.json();
+        const citiesList = Array.isArray(data) ? data : data.results || [];
+
+        if (citiesList.length === 0) {
+          hasMore = false;
+        } else {
+          allCities = [...allCities, ...citiesList];
+          // Se não tem próxima página, para o loop
+          if (!data.next) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        }
+      }
+
+      setCities(allCities);
     } catch (error) {
       console.error("Erro ao carregar cidades:", error);
     }
