@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Filter } from 'lucide-react';
+import SearchableDropdown from '../SearchableDropdown';
 
 const DescriptorFilters = ({
   searchTerm,
@@ -45,40 +46,31 @@ const DescriptorFilters = ({
         </div>
 
         {/* Filtro por disciplina */}
-        <select
+        <SearchableDropdown
+          options={subjects.map(subject => ({ value: subject, label: subject }))}
           value={selectedSubject}
-          onChange={(e) => setSelectedSubject(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">Todas as disciplinas</option>
-          {subjects.map(subject => (
-            <option key={subject} value={subject}>{subject}</option>
-          ))}
-        </select>
+          onChange={(value) => setSelectedSubject(value)}
+          placeholder="Todas as disciplinas"
+          searchPlaceholder="Pesquisar disciplina..."
+        />
 
         {/* Filtro por série */}
-        <select
+        <SearchableDropdown
+          options={grades.map(grade => ({ value: grade, label: grade }))}
           value={selectedGrade}
-          onChange={(e) => setSelectedGrade(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">Todas as séries</option>
-          {grades.map(grade => (
-            <option key={grade} value={grade}>{grade}</option>
-          ))}
-        </select>
+          onChange={(value) => setSelectedGrade(value)}
+          placeholder="Todas as séries"
+          searchPlaceholder="Pesquisar série..."
+        />
 
         {/* Filtro por campo de aprendizagem */}
-        <select
+        <SearchableDropdown
+          options={fields.map(field => ({ value: field, label: field }))}
           value={selectedField}
-          onChange={(e) => setSelectedField(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">Todos os campos</option>
-          {fields.map(field => (
-            <option key={field} value={field}>{field}</option>
-          ))}
-        </select>
+          onChange={(value) => setSelectedField(value)}
+          placeholder="Todos os campos"
+          searchPlaceholder="Pesquisar campo..."
+        />
       </div>
     </div>
   );

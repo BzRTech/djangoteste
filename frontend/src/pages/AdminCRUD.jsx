@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Pagination from "../components/Pagination";
 import Loading from "../components/Loading";
+import SearchableDropdown from "../components/SearchableDropdown";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
@@ -724,24 +725,16 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Cidade *
-        </label>
-        <select
-          required
+        <SearchableDropdown
+          label="Cidade *"
+          options={cities}
           value={formData.id_city}
-          onChange={(e) =>
-            setFormData({ ...formData, id_city: e.target.value })
-          }
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Selecione uma cidade</option>
-          {cities.map((city) => (
-            <option key={city.id} value={city.id}>
-              {city.city} - {city.state}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setFormData({ ...formData, id_city: value })}
+          getOptionLabel={(city) => `${city.city} - ${city.state}`}
+          getOptionValue={(city) => city.id}
+          placeholder="Selecione uma cidade"
+          searchPlaceholder="Pesquisar cidade..."
+        />
       </div>
 
       <div>
@@ -920,17 +913,17 @@ const TeacherForm = ({ item, onClose, onSave }) => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Status
-        </label>
-        <select
+        <SearchableDropdown
+          label="Status"
+          options={[
+            { value: 'active', label: 'Ativo' },
+            { value: 'inactive', label: 'Inativo' }
+          ]}
           value={formData.status}
-          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-        >
-          <option value="active">Ativo</option>
-          <option value="inactive">Inativo</option>
-        </select>
+          onChange={(value) => setFormData({ ...formData, status: value })}
+          placeholder="Selecione o status"
+          searchPlaceholder="Pesquisar status..."
+        />
       </div>
 
       <div>
@@ -990,7 +983,7 @@ const TeacherForm = ({ item, onClose, onSave }) => {
   );
 };
 
-const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
+const ClassForm = ({ item, schools: initialSchools, teachers: initialTeachers, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     class_name: item?.class_name || "",
     id_teacher: item?.id_teacher || "",
@@ -1000,6 +993,67 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
     shift: item?.shift || "",
   });
   const [saving, setSaving] = useState(false);
+  const [schools, setSchools] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Carrega TODAS as escolas e professores (sem paginação)
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        setLoading(true);
+
+        // Buscar todas as escolas
+        let allSchools = [];
+        let page = 1;
+        let hasMore = true;
+        while (hasMore) {
+          const response = await fetch(`${API_BASE_URL}/schools/?page=${page}`);
+          const data = await response.json();
+          const schoolsList = Array.isArray(data) ? data : data.results || [];
+          if (schoolsList.length === 0) {
+            hasMore = false;
+          } else {
+            allSchools = [...allSchools, ...schoolsList];
+            if (!data.next) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          }
+        }
+
+        // Buscar todos os professores
+        let allTeachers = [];
+        page = 1;
+        hasMore = true;
+        while (hasMore) {
+          const response = await fetch(`${API_BASE_URL}/teachers/?page=${page}`);
+          const data = await response.json();
+          const teachersList = Array.isArray(data) ? data : data.results || [];
+          if (teachersList.length === 0) {
+            hasMore = false;
+          } else {
+            allTeachers = [...allTeachers, ...teachersList];
+            if (!data.next) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          }
+        }
+
+        setSchools(allSchools);
+        setTeachers(allTeachers);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1031,6 +1085,15 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <span className="ml-2">Carregando...</span>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -1071,45 +1134,29 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Escola *
-        </label>
-        <select
-          required
+        <SearchableDropdown
+          label="Escola *"
+          options={schools}
           value={formData.id_school}
-          onChange={(e) =>
-            setFormData({ ...formData, id_school: e.target.value })
-          }
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Selecione uma escola</option>
-          {schools.map((school) => (
-            <option key={school.id} value={school.id}>
-              {school.school}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setFormData({ ...formData, id_school: value })}
+          getOptionLabel={(school) => school.school}
+          getOptionValue={(school) => school.id}
+          placeholder="Selecione uma escola"
+          searchPlaceholder="Pesquisar escola..."
+        />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Professor *
-        </label>
-        <select
-          required
+        <SearchableDropdown
+          label="Professor *"
+          options={teachers}
           value={formData.id_teacher}
-          onChange={(e) =>
-            setFormData({ ...formData, id_teacher: e.target.value })
-          }
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Selecione um professor</option>
-          {teachers.map((teacher) => (
-            <option key={teacher.id} value={teacher.id}>
-              {teacher.teacher_name}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setFormData({ ...formData, id_teacher: value })}
+          getOptionLabel={(teacher) => teacher.teacher_name}
+          getOptionValue={(teacher) => teacher.id}
+          placeholder="Selecione um professor"
+          searchPlaceholder="Pesquisar professor..."
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -1129,21 +1176,18 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Turno
-          </label>
-          <select
+          <SearchableDropdown
+            label="Turno"
+            options={[
+              { value: 'morning', label: 'Manhã' },
+              { value: 'afternoon', label: 'Tarde' },
+              { value: 'evening', label: 'Noite' }
+            ]}
             value={formData.shift}
-            onChange={(e) =>
-              setFormData({ ...formData, shift: e.target.value })
-            }
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Selecione um turno</option>
-            <option value="morning">Manhã</option>
-            <option value="afternoon">Tarde</option>
-            <option value="evening">Noite</option>
-          </select>
+            onChange={(value) => setFormData({ ...formData, shift: value })}
+            placeholder="Selecione um turno"
+            searchPlaceholder="Pesquisar turno..."
+          />
         </div>
       </div>
 
@@ -1173,7 +1217,7 @@ const ClassForm = ({ item, schools, teachers, onClose, onSave }) => {
   );
 };
 
-const StudentForm = ({ item, classes, onClose, onSave }) => {
+const StudentForm = ({ item, classes: initialClasses, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     student_name: item?.student_name || "",
     student_serial: item?.student_serial || "",
@@ -1183,6 +1227,45 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
     status: item?.status || "enrolled",
   });
   const [saving, setSaving] = useState(false);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Carrega TODAS as turmas (sem paginação)
+  useEffect(() => {
+    const fetchAllClasses = async () => {
+      try {
+        setLoading(true);
+        let allClasses = [];
+        let page = 1;
+        let hasMore = true;
+
+        while (hasMore) {
+          const response = await fetch(`${API_BASE_URL}/classes/?page=${page}`);
+          const data = await response.json();
+          const classesList = Array.isArray(data) ? data : data.results || [];
+
+          if (classesList.length === 0) {
+            hasMore = false;
+          } else {
+            allClasses = [...allClasses, ...classesList];
+            if (!data.next) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          }
+        }
+
+        setClasses(allClasses);
+      } catch (error) {
+        console.error("Erro ao carregar turmas:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllClasses();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1214,6 +1297,15 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+        <span className="ml-2">Carregando...</span>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -1268,40 +1360,32 @@ const StudentForm = ({ item, classes, onClose, onSave }) => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Turma *
-        </label>
-        <select
-          required
+        <SearchableDropdown
+          label="Turma *"
+          options={classes}
           value={formData.id_class}
-          onChange={(e) =>
-            setFormData({ ...formData, id_class: e.target.value })
-          }
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Selecione uma turma</option>
-          {classes.map((cls) => (
-            <option key={cls.id} value={cls.id}>
-              {cls.class_name} - {cls.school_name}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setFormData({ ...formData, id_class: value })}
+          getOptionLabel={(cls) => `${cls.class_name} - ${cls.school_name}`}
+          getOptionValue={(cls) => cls.id}
+          placeholder="Selecione uma turma"
+          searchPlaceholder="Pesquisar turma..."
+        />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Status
-        </label>
-        <select
+        <SearchableDropdown
+          label="Status"
+          options={[
+            { value: 'enrolled', label: 'Matriculado' },
+            { value: 'transferred', label: 'Transferido' },
+            { value: 'graduated', label: 'Formado' },
+            { value: 'dropped', label: 'Desistente' }
+          ]}
           value={formData.status}
-          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="enrolled">Matriculado</option>
-          <option value="transferred">Transferido</option>
-          <option value="graduated">Formado</option>
-          <option value="dropped">Desistente</option>
-        </select>
+          onChange={(value) => setFormData({ ...formData, status: value })}
+          placeholder="Selecione o status"
+          searchPlaceholder="Pesquisar status..."
+        />
       </div>
 
       <div className="flex gap-2 pt-4">
@@ -1556,10 +1640,10 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
 
       {/* Seleção de Escola */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-        <label className="block text-sm font-semibold text-gray-900 mb-2">
+        <h3 className="block text-sm font-semibold text-gray-900 mb-2">
           <School className="w-4 h-4 inline-block mr-2 mb-1" />
           Selecione a Escola
-        </label>
+        </h3>
         <p className="text-sm text-gray-600 mb-3">
           Escolha a escola para a qual deseja importar os alunos. As turmas serão filtradas por esta escola.
         </p>
@@ -1576,18 +1660,15 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
             </span>
           </div>
         ) : (
-          <select
+          <SearchableDropdown
+            options={schools}
             value={selectedSchool}
-            onChange={(e) => setSelectedSchool(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="">Selecione uma escola...</option>
-            {schools.map((school) => (
-              <option key={school.id} value={school.id}>
-                {school.school}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => setSelectedSchool(value)}
+            getOptionLabel={(school) => school.school}
+            getOptionValue={(school) => school.id}
+            placeholder="Selecione uma escola..."
+            searchPlaceholder="Pesquisar escola..."
+          />
         )}
       </div>
 

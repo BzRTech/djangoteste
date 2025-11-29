@@ -18,6 +18,7 @@ import Loading from "../components/Loading";
 import ResultsTab from "../components/examManagement/ResultsTab";
 import QuestionBankManager from "../components/examManagement/QuestionBankManager";
 import StatCard from "../components/StatCard";
+import SearchableDropdown from "../components/SearchableDropdown";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000/api";
@@ -798,66 +799,42 @@ const ApplicationForm = ({
       </h3>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Prova *
-        </label>
-        <select
-          required
+        <SearchableDropdown
+          label="Prova *"
+          options={exams}
           value={formData.id_exam}
-          onChange={(e) =>
-            setFormData({ ...formData, id_exam: e.target.value })
-          }
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-        >
-          <option value="">Selecione uma prova</option>
-          {exams.map((exam) => (
-            <option key={exam.id} value={exam.id}>
-              {exam.exam_name} - {exam.subject}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setFormData({ ...formData, id_exam: value })}
+          getOptionLabel={(exam) => `${exam.exam_name} - ${exam.subject}`}
+          getOptionValue={(exam) => exam.id}
+          placeholder="Selecione uma prova"
+          searchPlaceholder="Pesquisar prova..."
+        />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Turma *
-        </label>
-        <select
-          required
+        <SearchableDropdown
+          label="Turma *"
+          options={classes}
           value={formData.id_class}
-          onChange={(e) =>
-            setFormData({ ...formData, id_class: e.target.value })
-          }
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-        >
-          <option value="">Selecione uma turma</option>
-          {classes.map((cls) => (
-            <option key={cls.id} value={cls.id}>
-              {cls.class_name} - {cls.school_name}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setFormData({ ...formData, id_class: value })}
+          getOptionLabel={(cls) => `${cls.class_name} - ${cls.school_name}`}
+          getOptionValue={(cls) => cls.id}
+          placeholder="Selecione uma turma"
+          searchPlaceholder="Pesquisar turma..."
+        />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Professor *
-        </label>
-        <select
-          required
+        <SearchableDropdown
+          label="Professor *"
+          options={teachers}
           value={formData.id_teacher}
-          onChange={(e) =>
-            setFormData({ ...formData, id_teacher: e.target.value })
-          }
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-        >
-          <option value="">Selecione um professor</option>
-          {teachers.map((teacher) => (
-            <option key={teacher.id} value={teacher.id}>
-              {teacher.teacher_name}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setFormData({ ...formData, id_teacher: value })}
+          getOptionLabel={(teacher) => teacher.teacher_name}
+          getOptionValue={(teacher) => teacher.id}
+          placeholder="Selecione um professor"
+          searchPlaceholder="Pesquisar professor..."
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -924,58 +901,51 @@ const ApplicationForm = ({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tipo de Aplicação
-          </label>
-          <select
+          <SearchableDropdown
+            label="Tipo de Aplicação"
+            options={[
+              { value: 'diagnostic', label: 'Diagnóstica' },
+              { value: 'formative', label: 'Formativa' },
+              { value: 'summative', label: 'Somativa' }
+            ]}
             value={formData.application_type}
-            onChange={(e) =>
-              setFormData({ ...formData, application_type: e.target.value })
-            }
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Selecione um tipo</option>
-            <option value="diagnostic">Diagnóstica</option>
-            <option value="formative">Formativa</option>
-            <option value="summative">Somativa</option>
-          </select>
+            onChange={(value) => setFormData({ ...formData, application_type: value })}
+            placeholder="Selecione um tipo"
+            searchPlaceholder="Pesquisar tipo..."
+          />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Período de Avaliação
-          </label>
-          <select
+          <SearchableDropdown
+            label="Período de Avaliação"
+            options={[
+              { value: 'Q1', label: '1º Bimestre' },
+              { value: 'Q2', label: '2º Bimestre' },
+              { value: 'Q3', label: '3º Bimestre' },
+              { value: 'Q4', label: '4º Bimestre' }
+            ]}
             value={formData.assessment_period}
-            onChange={(e) =>
-              setFormData({ ...formData, assessment_period: e.target.value })
-            }
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Selecione um período</option>
-            <option value="Q1">1º Bimestre</option>
-            <option value="Q2">2º Bimestre</option>
-            <option value="Q3">3º Bimestre</option>
-            <option value="Q4">4º Bimestre</option>
-          </select>
+            onChange={(value) => setFormData({ ...formData, assessment_period: value })}
+            placeholder="Selecione um período"
+            searchPlaceholder="Pesquisar período..."
+          />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Status *
-        </label>
-        <select
-          required
+        <SearchableDropdown
+          label="Status *"
+          options={[
+            { value: 'scheduled', label: 'Agendada' },
+            { value: 'in_progress', label: 'Em Andamento' },
+            { value: 'completed', label: 'Concluída' },
+            { value: 'cancelled', label: 'Cancelada' }
+          ]}
           value={formData.status}
-          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-        >
-          <option value="scheduled">Agendada</option>
-          <option value="in_progress">Em Andamento</option>
-          <option value="completed">Concluída</option>
-          <option value="cancelled">Cancelada</option>
-        </select>
+          onChange={(value) => setFormData({ ...formData, status: value })}
+          placeholder="Selecione o status"
+          searchPlaceholder="Pesquisar status..."
+        />
       </div>
 
       <div>
