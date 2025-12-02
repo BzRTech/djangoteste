@@ -551,10 +551,10 @@ class TbExamsViewSet(viewsets.ModelViewSet):
     def statistics(self, request, pk=None):
         """Estatísticas do exame"""
         exam = self.get_object()
-        
+
         applications = TbExamApplications.objects.filter(id_exam=exam)
         results = TbExamResults.objects.filter(id_exam_application__id_exam=exam)
-        
+
         stats = {
             'total_applications': applications.count(),
             'total_students': results.count(),
@@ -563,8 +563,211 @@ class TbExamsViewSet(viewsets.ModelViewSet):
             'lowest_score': results.aggregate(Min('total_score'))['total_score__min'] or 0,
             'total_questions': TbQuestions.objects.filter(id_exam=exam).count(),
         }
-        
+
         return Response(stats)
+
+    @action(detail=False, methods=['post'])
+    def import_answer_key(self, request):
+        """
+        Importa gabarito completo da prova via CSV/Excel
+
+        Formato esperado:
+        - codigo_prova: Código único da prova (ex: PROVA2024_MAT_5)
+        - nome_prova: Nome da prova
+        - disciplina: Disciplina (Matemática, Português, etc)
+        - ano_escolar: Ano escolar (1-9)
+        - numero_questao: Número da questão (1, 2, 3...)
+        - resposta_correta: Letra da resposta (A, B, C, D, E)
+        - codigo_descritor: Código do descritor (ex: D01, D02)
+        - pontos: Pontos da questão (ex: 1.0, 1.5)
+        - dificuldade: Dificuldade (easy, medium, hard)
+        - enunciado: Texto da questão (opcional)
+        """
+        import csv
+        import io
+        from decimal import Decimal
+
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'Nenhum arquivo enviado'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verifica extensão
+        file_extension = file.name.split('.')[-1].lower()
+        if file_extension not in ['csv', 'xlsx', 'xls']:
+            return Response(
+                {'error': 'Formato inválido. Use CSV ou Excel (.xlsx, .xls)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Processa arquivo
+            if file_extension == 'csv':
+                decoded_file = file.read().decode('utf-8-sig')
+                reader = csv.DictReader(io.StringIO(decoded_file))
+                rows = list(reader)
+            else:
+                try:
+                    import openpyxl
+                    workbook = openpyxl.load_workbook(file)
+                    sheet = workbook.active
+                    headers = [cell.value for cell in sheet[1]]
+                    rows = []
+                    for row in sheet.iter_rows(min_row=2, values_only=True):
+                        rows.append(dict(zip(headers, row)))
+                except ImportError:
+                    return Response(
+                        {'error': 'Biblioteca openpyxl não instalada. Use CSV.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            if not rows:
+                return Response({'error': 'Arquivo vazio'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Agrupa questões por código de prova
+            exams_data = {}
+            errors = []
+            descriptors_not_found = set()
+
+            for idx, row in enumerate(rows, start=2):
+                try:
+                    codigo_prova = str(row.get('codigo_prova', '')).strip()
+                    nome_prova = str(row.get('nome_prova', '')).strip()
+                    disciplina = str(row.get('disciplina', '')).strip()
+                    ano_escolar = row.get('ano_escolar')
+                    numero_questao = row.get('numero_questao')
+                    resposta_correta = str(row.get('resposta_correta', '')).strip().upper()
+                    codigo_descritor = str(row.get('codigo_descritor', '')).strip()
+                    pontos = row.get('pontos', 1.0)
+                    dificuldade = str(row.get('dificuldade', 'medium')).strip().lower()
+                    enunciado = str(row.get('enunciado', '')).strip()
+
+                    # Validações
+                    if not codigo_prova:
+                        errors.append(f"Linha {idx}: codigo_prova obrigatório")
+                        continue
+                    if not nome_prova:
+                        errors.append(f"Linha {idx}: nome_prova obrigatório")
+                        continue
+                    if not numero_questao:
+                        errors.append(f"Linha {idx}: numero_questao obrigatório")
+                        continue
+                    if not resposta_correta or resposta_correta not in ['A', 'B', 'C', 'D', 'E']:
+                        errors.append(f"Linha {idx}: resposta_correta deve ser A, B, C, D ou E")
+                        continue
+
+                    # Converte tipos
+                    try:
+                        numero_questao = int(numero_questao)
+                        pontos = Decimal(str(pontos))
+                        if ano_escolar:
+                            ano_escolar = str(ano_escolar).strip()
+                    except (ValueError, TypeError) as e:
+                        errors.append(f"Linha {idx}: Erro de conversão - {str(e)}")
+                        continue
+
+                    # Valida descritor
+                    descriptor = None
+                    if codigo_descritor:
+                        try:
+                            descriptor = TbDescriptorsCatalog.objects.get(descriptor_code=codigo_descritor)
+                        except TbDescriptorsCatalog.DoesNotExist:
+                            descriptors_not_found.add(codigo_descritor)
+
+                    # Agrupa por prova
+                    if codigo_prova not in exams_data:
+                        exams_data[codigo_prova] = {
+                            'nome_prova': nome_prova,
+                            'disciplina': disciplina,
+                            'ano_escolar': ano_escolar,
+                            'questions': []
+                        }
+
+                    exams_data[codigo_prova]['questions'].append({
+                        'numero_questao': numero_questao,
+                        'resposta_correta': resposta_correta,
+                        'descriptor': descriptor,
+                        'pontos': pontos,
+                        'dificuldade': dificuldade,
+                        'enunciado': enunciado
+                    })
+
+                except Exception as e:
+                    errors.append(f"Linha {idx}: {str(e)}")
+                    continue
+
+            # Cria provas e questões
+            created_exams = []
+            with transaction.atomic():
+                for codigo_prova, exam_data in exams_data.items():
+                    # Verifica se prova já existe
+                    exam, created = TbExams.objects.get_or_create(
+                        exam_code=codigo_prova,
+                        defaults={
+                            'exam_name': exam_data['nome_prova'],
+                            'subject': exam_data['disciplina'],
+                            'school_year': exam_data['ano_escolar'],
+                            'total_questions': len(exam_data['questions'])
+                        }
+                    )
+
+                    if not created:
+                        # Atualiza informações da prova se já existe
+                        exam.exam_name = exam_data['nome_prova']
+                        exam.subject = exam_data['disciplina']
+                        exam.school_year = exam_data['ano_escolar']
+                        exam.total_questions = len(exam_data['questions'])
+                        exam.save()
+
+                        # Remove questões antigas
+                        TbQuestions.objects.filter(id_exam=exam).delete()
+
+                    # Cria questões
+                    for q_data in exam_data['questions']:
+                        question = TbQuestions.objects.create(
+                            id_exam=exam,
+                            question_number=q_data['numero_questao'],
+                            question_text=q_data['enunciado'] or f"Questão {q_data['numero_questao']}",
+                            question_type='multiple_choice',
+                            correct_answer=q_data['resposta_correta'],
+                            difficulty_level=q_data['dificuldade'],
+                            points=q_data['pontos'],
+                            id_descriptor=q_data['descriptor']
+                        )
+
+                        # Cria alternativas genéricas (A, B, C, D, E)
+                        for i, letter in enumerate(['A', 'B', 'C', 'D', 'E'], start=1):
+                            TbAlternatives.objects.create(
+                                id_question=question,
+                                alternative_order=i,
+                                alternative_text=f"Alternativa {letter}",
+                                is_correct=(letter == q_data['resposta_correta'])
+                            )
+
+                    created_exams.append({
+                        'codigo': codigo_prova,
+                        'nome': exam_data['nome_prova'],
+                        'questoes': len(exam_data['questions']),
+                        'criada': created
+                    })
+
+            response_data = {
+                'success': True,
+                'message': f'{len(created_exams)} prova(s) importada(s)',
+                'exams': created_exams,
+                'errors': errors if errors else None
+            }
+
+            if descriptors_not_found:
+                response_data['warning'] = 'Alguns descritores não foram encontrados'
+                response_data['descriptors_not_found'] = list(descriptors_not_found)
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao processar arquivo: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class TbQuestionsViewSet(viewsets.ModelViewSet):
@@ -661,18 +864,303 @@ class TbExamApplicationsViewSet(viewsets.ModelViewSet):
         """Altera o status da aplicação"""
         application = self.get_object()
         new_status = request.data.get('status')
-        
+
         if new_status not in ['scheduled', 'in_progress', 'completed', 'cancelled']:
             return Response(
-                {'error': 'Status inválido'}, 
+                {'error': 'Status inválido'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         application.status = new_status
         application.save()
-        
+
         serializer = self.get_serializer(application)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def import_student_answers(self, request):
+        """
+        Importa respostas dos alunos via CSV/Excel
+
+        Formato esperado:
+        - codigo_prova: Código da prova previamente importada
+        - id_turma: ID da turma
+        - matricula_aluno: Matrícula do aluno
+        - q1, q2, q3...: Respostas (A, B, C, D, E ou vazio para questão em branco)
+
+        Exemplo CSV:
+        codigo_prova,id_turma,matricula_aluno,q1,q2,q3,q4,q5
+        PROVA2024_MAT_5,1,12345,A,C,B,D,A
+        PROVA2024_MAT_5,1,67890,B,C,A,D,
+        """
+        import csv
+        import io
+        from datetime import datetime
+
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'Nenhum arquivo enviado'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verifica extensão
+        file_extension = file.name.split('.')[-1].lower()
+        if file_extension not in ['csv', 'xlsx', 'xls']:
+            return Response(
+                {'error': 'Formato inválido. Use CSV ou Excel (.xlsx, .xls)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Processa arquivo
+            if file_extension == 'csv':
+                decoded_file = file.read().decode('utf-8-sig')
+                reader = csv.DictReader(io.StringIO(decoded_file))
+                rows = list(reader)
+            else:
+                try:
+                    import openpyxl
+                    workbook = openpyxl.load_workbook(file)
+                    sheet = workbook.active
+                    headers = [cell.value for cell in sheet[1]]
+                    rows = []
+                    for row in sheet.iter_rows(min_row=2, values_only=True):
+                        rows.append(dict(zip(headers, row)))
+                except ImportError:
+                    return Response(
+                        {'error': 'Biblioteca openpyxl não instalada. Use CSV.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            if not rows:
+                return Response({'error': 'Arquivo vazio'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Agrupa por código de prova e turma
+            applications_data = {}
+            errors = []
+            students_not_found = set()
+            exams_not_found = set()
+
+            for idx, row in enumerate(rows, start=2):
+                try:
+                    codigo_prova = str(row.get('codigo_prova', '')).strip()
+                    id_turma = row.get('id_turma')
+                    matricula_aluno = row.get('matricula_aluno')
+
+                    # Validações básicas
+                    if not codigo_prova:
+                        errors.append(f"Linha {idx}: codigo_prova obrigatório")
+                        continue
+                    if not id_turma:
+                        errors.append(f"Linha {idx}: id_turma obrigatório")
+                        continue
+                    if not matricula_aluno:
+                        errors.append(f"Linha {idx}: matricula_aluno obrigatório")
+                        continue
+
+                    # Converte tipos
+                    try:
+                        id_turma = int(id_turma)
+                        matricula_aluno = int(matricula_aluno)
+                    except (ValueError, TypeError):
+                        errors.append(f"Linha {idx}: id_turma e matricula_aluno devem ser números")
+                        continue
+
+                    # Busca prova
+                    try:
+                        exam = TbExams.objects.get(exam_code=codigo_prova)
+                    except TbExams.DoesNotExist:
+                        exams_not_found.add(codigo_prova)
+                        errors.append(f"Linha {idx}: Prova '{codigo_prova}' não encontrada")
+                        continue
+
+                    # Busca turma
+                    try:
+                        class_obj = TbClass.objects.get(id=id_turma)
+                    except TbClass.DoesNotExist:
+                        errors.append(f"Linha {idx}: Turma ID {id_turma} não encontrada")
+                        continue
+
+                    # Busca aluno
+                    try:
+                        student = TbStudents.objects.get(
+                            student_serial=matricula_aluno,
+                            id_class=class_obj
+                        )
+                    except TbStudents.DoesNotExist:
+                        students_not_found.add(matricula_aluno)
+                        errors.append(f"Linha {idx}: Aluno matrícula {matricula_aluno} não encontrado na turma")
+                        continue
+
+                    # Extrai respostas (q1, q2, q3...)
+                    answers = {}
+                    for key, value in row.items():
+                        if key.startswith('q') and key[1:].isdigit():
+                            question_number = int(key[1:])
+                            answer_value = str(value).strip().upper() if value else ''
+                            if answer_value and answer_value not in ['A', 'B', 'C', 'D', 'E']:
+                                errors.append(f"Linha {idx}, {key}: Resposta deve ser A, B, C, D, E ou vazio")
+                                continue
+                            answers[question_number] = answer_value
+
+                    if not answers:
+                        errors.append(f"Linha {idx}: Nenhuma resposta encontrada (colunas q1, q2, q3...)")
+                        continue
+
+                    # Agrupa por aplicação (prova + turma)
+                    app_key = (codigo_prova, id_turma)
+                    if app_key not in applications_data:
+                        applications_data[app_key] = {
+                            'exam': exam,
+                            'class': class_obj,
+                            'students_answers': []
+                        }
+
+                    applications_data[app_key]['students_answers'].append({
+                        'student': student,
+                        'answers': answers
+                    })
+
+                except Exception as e:
+                    errors.append(f"Linha {idx}: {str(e)}")
+                    continue
+
+            # Processa aplicações e respostas
+            processed_students = 0
+            created_applications = []
+
+            with transaction.atomic():
+                for (codigo_prova, id_turma), app_data in applications_data.items():
+                    exam = app_data['exam']
+                    class_obj = app_data['class']
+
+                    # Cria ou busca aplicação
+                    application, created = TbExamApplications.objects.get_or_create(
+                        id_exam=exam,
+                        id_class=class_obj,
+                        defaults={
+                            'application_date': datetime.now().date(),
+                            'status': 'completed',
+                            'fiscal_year': datetime.now().year
+                        }
+                    )
+
+                    if created:
+                        created_applications.append({
+                            'exam': exam.exam_name,
+                            'class': class_obj.class_name
+                        })
+
+                    # Busca questões da prova
+                    questions = TbQuestions.objects.filter(id_exam=exam).select_related('id_descriptor')
+                    questions_dict = {q.question_number: q for q in questions}
+
+                    # Processa respostas de cada aluno
+                    for student_data in app_data['students_answers']:
+                        student = student_data['student']
+                        answers = student_data['answers']
+
+                        # Verifica se aluno já fez a prova
+                        if TbStudentAnswers.objects.filter(
+                            id_student=student,
+                            id_exam_application=application
+                        ).exists():
+                            errors.append(
+                                f"Aluno {student.student_name} (mat: {student.student_serial}) "
+                                f"já tem respostas para esta prova"
+                            )
+                            continue
+
+                        # Cria respostas
+                        student_answers = []
+                        for q_number, answer_letter in answers.items():
+                            if q_number not in questions_dict:
+                                continue
+
+                            question = questions_dict[q_number]
+
+                            # Busca alternativa selecionada
+                            selected_alternative = None
+                            is_correct = False
+
+                            if answer_letter:  # Se não está em branco
+                                # Converte letra para número (A=1, B=2, etc)
+                                alternative_order = ord(answer_letter) - ord('A') + 1
+                                try:
+                                    selected_alternative = TbAlternatives.objects.get(
+                                        id_question=question,
+                                        alternative_order=alternative_order
+                                    )
+                                    is_correct = selected_alternative.is_correct
+                                except TbAlternatives.DoesNotExist:
+                                    pass
+
+                            # Cria resposta do aluno
+                            student_answer = TbStudentAnswers.objects.create(
+                                id_student=student,
+                                id_exam_application=application,
+                                id_question=question,
+                                id_selected_alternative=selected_alternative,
+                                answer_text=answer_letter,
+                                is_correct=is_correct
+                            )
+                            student_answers.append(student_answer)
+
+                        # Calcula resultado
+                        if student_answers:
+                            self._calculate_result_and_descriptors(student, application, student_answers)
+                            processed_students += 1
+
+            response_data = {
+                'success': True,
+                'message': f'Respostas de {processed_students} aluno(s) importadas com sucesso',
+                'processed_students': processed_students,
+                'created_applications': created_applications,
+                'errors': errors if errors else None
+            }
+
+            if students_not_found:
+                response_data['students_not_found'] = list(students_not_found)
+
+            if exams_not_found:
+                response_data['exams_not_found'] = list(exams_not_found)
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao processar arquivo: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def _calculate_result_and_descriptors(self, student, application, answers):
+        """Calcula resultado e atribui descritores conquistados"""
+        # Calcula pontuação
+        total_score = sum([ans.id_question.points for ans in answers if ans.is_correct])
+        max_score = sum([ans.id_question.points for ans in answers])
+        correct_count = sum([1 for ans in answers if ans.is_correct])
+        wrong_count = sum([1 for ans in answers if not ans.is_correct and ans.answer_text])
+        blank_count = sum([1 for ans in answers if not ans.answer_text])
+
+        # Cria resultado
+        TbExamResults.objects.update_or_create(
+            id_student=student,
+            id_exam_application=application,
+            defaults={
+                'total_score': total_score,
+                'max_score': max_score,
+                'correct_answers': correct_count,
+                'wrong_answers': wrong_count,
+                'blank_answers': blank_count
+            }
+        )
+
+        # Atribui descritores das questões corretas
+        for answer in answers:
+            if answer.is_correct and answer.id_question.id_descriptor:
+                TbStudentDescriptorAchievements.objects.get_or_create(
+                    id_student=student,
+                    id_descriptor=answer.id_question.id_descriptor,
+                    defaults={'id_exam_application': application}
+                )
 
 
 class TbAssessmentMetadataViewSet(viewsets.ModelViewSet):

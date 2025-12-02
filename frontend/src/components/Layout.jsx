@@ -10,6 +10,7 @@ const Layout = () => {
     { to: "/descriptors", label: "Descritores" },
     { to: "/admin", label: "Administração" },
     { to: "/exams", label: "Provas" },
+    { to: "/exam-import", label: "Importar Provas" },
     { to: "/student-answers", label: "Respostas dos Alunos" },
     { to: "/student/1", label: "Perfil do Aluno" },
     { to: "/take-exam/", label: "Prova" },
