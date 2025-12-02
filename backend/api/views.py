@@ -566,6 +566,111 @@ class TbExamsViewSet(viewsets.ModelViewSet):
 
         return Response(stats)
 
+    @action(detail=True, methods=['post'])
+    def upload_file(self, request, pk=None):
+        """
+        Faz upload do arquivo da prova (PDF, imagem, etc) para S3 ou storage local
+        """
+        from django.conf import settings
+        import boto3
+        from botocore.exceptions import ClientError
+        import uuid
+
+        exam = self.get_object()
+        file = request.FILES.get('file')
+
+        if not file:
+            return Response(
+                {'error': 'Nenhum arquivo enviado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validar tipo de arquivo
+        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
+        file_extension = '.' + file.name.split('.')[-1].lower()
+
+        if file_extension not in allowed_extensions:
+            return Response(
+                {
+                    'error': f'Tipo de arquivo não permitido. Use: {", ".join(allowed_extensions)}'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validar tamanho (max 50MB)
+        max_size = 50 * 1024 * 1024  # 50MB
+        if file.size > max_size:
+            return Response(
+                {'error': 'Arquivo muito grande. Tamanho máximo: 50MB'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            if settings.USE_S3:
+                # Upload para S3
+                s3_client = boto3.client(
+                    's3',
+                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                    region_name=settings.AWS_S3_REGION_NAME
+                )
+
+                # Gera nome único para o arquivo
+                unique_filename = f"{settings.EXAM_FILES_LOCATION}/{exam.exam_code}_{uuid.uuid4()}{file_extension}"
+
+                # Faz upload
+                s3_client.upload_fileobj(
+                    file,
+                    settings.AWS_STORAGE_BUCKET_NAME,
+                    unique_filename,
+                    ExtraArgs={
+                        'ContentType': file.content_type,
+                        'ACL': 'public-read'
+                    }
+                )
+
+                # URL do arquivo no S3
+                file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{unique_filename}"
+
+            else:
+                # Upload local (desenvolvimento)
+                import os
+                from django.core.files.storage import default_storage
+
+                # Cria diretório se não existir
+                upload_path = os.path.join(settings.EXAM_FILES_LOCATION, exam.exam_code)
+                os.makedirs(os.path.join(settings.MEDIA_ROOT, upload_path), exist_ok=True)
+
+                # Salva arquivo
+                unique_filename = f"{upload_path}/{uuid.uuid4()}{file_extension}"
+                file_path = default_storage.save(unique_filename, file)
+
+                # URL do arquivo local
+                file_url = f"{settings.MEDIA_URL}{file_path}"
+
+            # Atualiza prova com URL do arquivo
+            exam.exam_file = file_url
+            exam.save()
+
+            return Response({
+                'success': True,
+                'message': 'Arquivo enviado com sucesso',
+                'file_url': file_url,
+                'file_name': file.name,
+                'file_size': file.size
+            }, status=status.HTTP_200_OK)
+
+        except ClientError as e:
+            return Response(
+                {'error': f'Erro ao fazer upload para S3: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao processar arquivo: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=False, methods=['post'])
     def import_answer_key(self, request):
         """

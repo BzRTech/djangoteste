@@ -241,6 +241,7 @@ class TbExams(models.Model):
     school_year = models.IntegerField(blank=True, null=True)
     total_questions = models.IntegerField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    exam_file = models.CharField(max_length=500, blank=True, null=True)  # URL do arquivo no S3
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

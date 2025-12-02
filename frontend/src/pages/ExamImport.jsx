@@ -8,6 +8,8 @@ import {
   List,
   Users,
   Loader2,
+  Paperclip,
+  ExternalLink,
 } from "lucide-react";
 import Loading from "../components/Loading";
 
@@ -31,6 +33,10 @@ const ExamImport = () => {
   const [answersResult, setAnswersResult] = useState(null);
   const [selectedExam, setSelectedExam] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
+
+  // Estado para upload de arquivo da prova
+  const [uploadingFileForExam, setUploadingFileForExam] = useState(null);
+  const [examFileUploadResult, setExamFileUploadResult] = useState({});
 
   useEffect(() => {
     fetchData();
@@ -228,6 +234,58 @@ PROVA2024_MAT_5,1,11111,A,C,B,D,E,C,B,A,D,C`;
     link.href = URL.createObjectURL(blob);
     link.download = "template_respostas.csv";
     link.click();
+  };
+
+  // ============================================
+  // UPLOAD DE ARQUIVO DA PROVA (PDF/Imagem)
+  // ============================================
+
+  const handleExamFileUpload = async (examId, file) => {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      setUploadingFileForExam(examId);
+      setExamFileUploadResult((prev) => ({
+        ...prev,
+        [examId]: null,
+      }));
+
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/upload_file/`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setExamFileUploadResult((prev) => ({
+          ...prev,
+          [examId]: { success: true, ...result },
+        }));
+        fetchData(); // Atualiza lista de provas
+      } else {
+        setExamFileUploadResult((prev) => ({
+          ...prev,
+          [examId]: {
+            success: false,
+            error: result.error || "Erro ao fazer upload",
+          },
+        }));
+      }
+    } catch (err) {
+      setExamFileUploadResult((prev) => ({
+        ...prev,
+        [examId]: {
+          success: false,
+          error: `Erro: ${err.message}`,
+        },
+      }));
+    } finally {
+      setUploadingFileForExam(null);
+    }
   };
 
   if (loading && !answerKeyFile && !answersFile) {
@@ -675,6 +733,75 @@ PROVA2024_MAT_5,1,11111,A,C,B,D,E,C,B,A,D,C`;
                                 <span className="font-medium">Questões:</span>{" "}
                                 {exam.questions_count || exam.total_questions || 0}
                               </p>
+                            </div>
+
+                            {/* Seção de Arquivo da Prova */}
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              {exam.exam_file ? (
+                                <div className="flex items-center gap-3">
+                                  <Paperclip className="h-4 w-4 text-green-600" />
+                                  <a
+                                    href={exam.exam_file}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-green-600 hover:text-green-800 font-medium flex items-center gap-1"
+                                  >
+                                    Ver arquivo da prova
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="text-sm text-gray-500 mb-2">
+                                    📄 Arquivo da prova (PDF, imagem):
+                                  </p>
+                                  <label className="cursor-pointer inline-flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                                    {uploadingFileForExam === exam.id ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Enviando...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Upload className="h-4 w-4" />
+                                        Fazer Upload
+                                      </>
+                                    )}
+                                    <input
+                                      type="file"
+                                      className="hidden"
+                                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                      onChange={(e) =>
+                                        handleExamFileUpload(exam.id, e.target.files[0])
+                                      }
+                                      disabled={uploadingFileForExam === exam.id}
+                                    />
+                                  </label>
+                                </div>
+                              )}
+
+                              {/* Resultado do upload */}
+                              {examFileUploadResult[exam.id] && (
+                                <div
+                                  className={`mt-2 text-xs p-2 rounded ${
+                                    examFileUploadResult[exam.id].success
+                                      ? "bg-green-50 text-green-700"
+                                      : "bg-red-50 text-red-700"
+                                  }`}
+                                >
+                                  {examFileUploadResult[exam.id].success ? (
+                                    <span className="flex items-center gap-1">
+                                      <CheckCircle className="h-3 w-3" />
+                                      {examFileUploadResult[exam.id].message}
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1">
+                                      <AlertCircle className="h-3 w-3" />
+                                      {examFileUploadResult[exam.id].error}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="ml-4">
