@@ -191,6 +191,7 @@ class TbExamsSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'description': {'required': False, 'allow_blank': True, 'allow_null': True},
             'total_questions': {'required': False, 'allow_null': True},
+            'exam_file': {'required': False, 'allow_blank': True, 'allow_null': True},
         }
 
 
@@ -313,15 +314,15 @@ class TbExamsDetailSerializer(serializers.ModelSerializer):
     """Serializer detalhado com contagem de questões"""
     questions_count = serializers.SerializerMethodField()
     subject_name = serializers.CharField(source='subject', read_only=True)
-    
+
     class Meta:
         model = TbExams
         fields = [
             'id', 'exam_code', 'exam_name', 'subject', 'subject_name',
-            'school_year', 'total_questions', 'description', 
+            'school_year', 'total_questions', 'description', 'exam_file',
             'questions_count', 'created_at'
         ]
-    
+
     def get_questions_count(self, obj):
         return TbQuestions.objects.filter(id_exam=obj).count()
 
