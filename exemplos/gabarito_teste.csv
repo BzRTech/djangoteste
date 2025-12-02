@@ -1,0 +1,11 @@
+codigo_prova,nome_prova,disciplina,ano_escolar,numero_questao,resposta_correta,codigo_descritor,pontos,dificuldade,enunciado
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,1,A,D01,1.0,easy,Qual é o resultado de 5 + 3?
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,2,C,D02,1.5,medium,Resolva a equação: 2x = 10
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,3,B,D01,1.0,hard,Calcule a área de um quadrado de lado 4cm
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,4,D,D03,1.0,easy,Quanto é 12 ÷ 3?
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,5,E,D02,2.0,medium,Qual é o próximo número da sequência: 2 4 6 8 __?
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,6,A,D01,1.0,easy,Quanto é 7 - 3?
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,7,C,D03,1.5,medium,Quantos centímetros tem 1 metro?
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,8,B,D02,1.0,hard,Se João tem 8 maçãs e deu 3 para Maria quantas sobraram?
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,9,D,D01,1.5,medium,Qual o valor de 15 - 7?
+PROVA_TESTE_2024,Avaliação Diagnóstica - Teste,Matemática,5,10,E,D03,2.0,hard,Quantos minutos tem meia hora?

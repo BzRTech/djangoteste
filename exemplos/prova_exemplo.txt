@@ -1,0 +1,91 @@
+AVALIAÇÃO DIAGNÓSTICA - TESTE
+Matemática - 5º Ano
+Data: __/__/____
+Nome: ________________________________  Turma: ______
+
+INSTRUÇÕES:
+- Leia atentamente cada questão antes de responder
+- Marque apenas UMA alternativa por questão
+- Use lápis ou caneta azul ou preta
+- Não use calculadora
+
+===============================================
+QUESTÕES
+===============================================
+
+1. Qual é o resultado de 5 + 3?
+   (A) 8
+   (B) 7
+   (C) 9
+   (D) 6
+   (E) 10
+
+2. Resolva a equação: 2x = 10
+   (A) x = 3
+   (B) x = 4
+   (C) x = 5
+   (D) x = 6
+   (E) x = 7
+
+3. Calcule a área de um quadrado de lado 4cm
+   (A) 12 cm²
+   (B) 16 cm²
+   (C) 20 cm²
+   (D) 8 cm²
+   (E) 14 cm²
+
+4. Quanto é 12 ÷ 3?
+   (A) 2
+   (B) 3
+   (C) 5
+   (D) 4
+   (E) 6
+
+5. Qual é o próximo número da sequência: 2, 4, 6, 8, __?
+   (A) 9
+   (B) 11
+   (C) 12
+   (D) 14
+   (E) 10
+
+6. Quanto é 7 - 3?
+   (A) 4
+   (B) 5
+   (C) 3
+   (D) 6
+   (E) 2
+
+7. Quantos centímetros tem 1 metro?
+   (A) 10 cm
+   (B) 50 cm
+   (C) 100 cm
+   (D) 1000 cm
+   (E) 500 cm
+
+8. Se João tem 8 maçãs e deu 3 para Maria, quantas sobraram?
+   (A) 11
+   (B) 5
+   (C) 6
+   (D) 4
+   (E) 3
+
+9. Qual o valor de 15 - 7?
+   (A) 7
+   (B) 9
+   (C) 6
+   (D) 8
+   (E) 10
+
+10. Quantos minutos tem meia hora?
+    (A) 15 minutos
+    (B) 20 minutos
+    (C) 25 minutos
+    (D) 40 minutos
+    (E) 30 minutos
+
+===============================================
+GABARITO (NÃO PREENCHER)
+===============================================
+1-A  2-C  3-B  4-D  5-E  6-A  7-C  8-B  9-D  10-E
+
+Código da Prova: PROVA_TESTE_2024
