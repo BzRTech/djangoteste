@@ -47,16 +47,16 @@ const AdminCRUD = () => {
   const ITEMS_PER_PAGE = 10;
 
   const tabs = [
+    { id: "import", label: "Importar Alunos", icon: Upload, color: "gray" },
     { id: "schools", label: "Escolas", icon: School, color: "blue" },
+    { id: "classes", label: "Turmas", icon: BookOpen, color: "purple" },
     {
       id: "teachers",
       label: "Professores",
       icon: GraduationCap,
       color: "green",
     },
-    { id: "classes", label: "Turmas", icon: BookOpen, color: "purple" },
     { id: "students", label: "Alunos", icon: Users, color: "orange" },
-    { id: "import", label: "Importar", icon: Upload, color: "indigo" },
   ];
 
   useEffect(() => {
@@ -281,16 +281,16 @@ const AdminCRUD = () => {
                     onDelete={handleDelete}
                   />
                 )}
+                {activeTab === "classes" && (
+                  <ClassesTable
+                  data={data.classes}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  />
+                )}
                 {activeTab === "teachers" && (
                   <TeachersTable
                     data={data.teachers}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                )}
-                {activeTab === "classes" && (
-                  <ClassesTable
-                    data={data.classes}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                   />
@@ -1104,12 +1104,7 @@ const ClassForm = ({ item, schools: initialSchools, teachers: initialTeachers, o
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
-        <span className="ml-2">Carregando...</span>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (
@@ -1196,8 +1191,8 @@ const ClassForm = ({ item, schools: initialSchools, teachers: initialTeachers, o
           <SearchableDropdown
             label="Turno"
             options={[
-              { value: 'morning', label: 'Manhã' },
-              { value: 'afternoon', label: 'Tarde' },
+              { value: 'Manhã', label: 'Manhã' },
+              { value: 'Tarde', label: 'Tarde' },
               { value: 'Integral', label: 'Integral' }
             ]}
             value={formData.shift}
@@ -1241,7 +1236,7 @@ const StudentForm = ({ item, classes: initialClasses, onClose, onSave }) => {
     id_class: item?.id_class || "",
     enrollment_date:
       item?.enrollment_date || new Date().toISOString().split("T")[0],
-    status: item?.status || "enrolled",
+    status: item?.status || "Matriculado",
   });
   const [saving, setSaving] = useState(false);
   const [classes, setClasses] = useState([]);
@@ -1644,7 +1639,8 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
           </li>
           <li>
             <strong>Status</strong>: Status do aluno (opcional, padrão:
-            enrolled)
+            Matriculado). Valores aceitos: Matriculado, Transferido, Formado,
+            Desistente
           </li>
         </ul>
         <div className="mt-3 pt-3 border-t border-gray-300">

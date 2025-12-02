@@ -109,6 +109,43 @@ class TbClassViewSet(viewsets.ModelViewSet):
     search_fields = ['class_name']
 
 
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Sobrescreve o método destroy para verificar dependências antes de deletar
+        """
+        turma = self.get_object()
+ 
+        # Verifica dependências
+        dependencies = []
+ 
+        # Verifica alunos vinculados
+        students_count = TbStudents.objects.filter(id_class=turma).count()
+        if students_count > 0:
+            dependencies.append(f"{students_count} aluno(s)")
+ 
+        # Verifica indicadores IDEB vinculados
+        ideb_indicators_count = TbClassIdebIndicators.objects.filter(id_class=turma).count()
+        if ideb_indicators_count > 0:
+            dependencies.append(f"{ideb_indicators_count} indicador(es) IDEB")
+ 
+        # Verifica aplicações de exame vinculadas
+        exam_applications_count = TbExamApplications.objects.filter(id_class=turma).count()
+        if exam_applications_count > 0:
+            dependencies.append(f"{exam_applications_count} aplicação(ões) de exame")
+ 
+        # Se houver dependências, retorna erro
+        if dependencies:
+            return Response({
+                'error': 'Não é possível deletar esta turma',
+                'message': f'A turma "{turma.class_name}" possui registros vinculados',
+                'dependencies': dependencies,
+                'suggestion': 'Remova ou reatribua os registros vinculados antes de deletar a turma'
+            }, status=status.HTTP_400_BAD_REQUEST)
+ 
+        # Se não houver dependências, permite a deleção
+        return super().destroy(request, *args, **kwargs)
+
 class TbStudentsViewSet(viewsets.ModelViewSet):
     """Alunos"""
     queryset = TbStudents.objects.all().select_related(
