@@ -857,8 +857,11 @@ class TbExamsViewSet(viewsets.ModelViewSet):
                         exam.total_questions = len(exam_data['questions'])
                         exam.save()
 
-                        # Remove questões antigas
-                        TbQuestions.objects.filter(id_exam=exam).delete()
+                        # Remove alternativas e questões antigas
+                        questions_to_delete = TbQuestions.objects.filter(id_exam=exam)
+                        for question in questions_to_delete:
+                            TbAlternatives.objects.filter(id_question=question).delete()
+                        questions_to_delete.delete()
 
                     # Cria questões
                     for q_data in exam_data['questions']:
