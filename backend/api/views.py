@@ -323,7 +323,24 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
         try:
             # Processa arquivo CSV
             if file_extension == 'csv':
-                decoded_file = file.read().decode('utf-8-sig')
+                # Try multiple encodings to handle different file formats
+                file_content = file.read()
+                decoded_file = None
+                encodings_to_try = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+
+                for encoding in encodings_to_try:
+                    try:
+                        decoded_file = file_content.decode(encoding)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+
+                if decoded_file is None:
+                    return Response(
+                        {'error': 'Erro ao processar arquivo: codificação não suportada. Por favor, salve o arquivo como UTF-8.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
                 reader = csv.DictReader(io.StringIO(decoded_file))
                 rows = list(reader)
             # Processa arquivo Excel
@@ -707,7 +724,24 @@ class TbExamsViewSet(viewsets.ModelViewSet):
         try:
             # Processa arquivo
             if file_extension == 'csv':
-                decoded_file = file.read().decode('utf-8-sig')
+                # Try multiple encodings to handle different file formats
+                file_content = file.read()
+                decoded_file = None
+                encodings_to_try = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+
+                for encoding in encodings_to_try:
+                    try:
+                        decoded_file = file_content.decode(encoding)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+
+                if decoded_file is None:
+                    return Response(
+                        {'error': 'Erro ao processar arquivo: codificação não suportada. Por favor, salve o arquivo como UTF-8.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
                 reader = csv.DictReader(io.StringIO(decoded_file))
                 rows = list(reader)
             else:
@@ -1017,7 +1051,24 @@ class TbExamApplicationsViewSet(viewsets.ModelViewSet):
         try:
             # Processa arquivo
             if file_extension == 'csv':
-                decoded_file = file.read().decode('utf-8-sig')
+                # Try multiple encodings to handle different file formats
+                file_content = file.read()
+                decoded_file = None
+                encodings_to_try = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+
+                for encoding in encodings_to_try:
+                    try:
+                        decoded_file = file_content.decode(encoding)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+
+                if decoded_file is None:
+                    return Response(
+                        {'error': 'Erro ao processar arquivo: codificação não suportada. Por favor, salve o arquivo como UTF-8.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
                 reader = csv.DictReader(io.StringIO(decoded_file))
                 rows = list(reader)
             else:
