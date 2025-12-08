@@ -14,6 +14,7 @@ import ExamImport from "./pages/ExamImport";
 import StudentProfile from "./pages/StudentProfile";
 import StudentAnswers from "./pages/StudentAnswers";
 import TakeExam from "./pages/TakeExam";
+import UserProfile from "./pages/UserProfile";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="student/:id" element={<StudentProfile />} />
           <Route path="student-answers" element={<StudentAnswers />} />
           <Route path="take-exam" element={<TakeExam />} />
+          <Route path="profile" element={<UserProfile />} />
         </Route>
       </Routes>
     </Router>
