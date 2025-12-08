@@ -28,9 +28,6 @@ const Layout = () => {
     { to: "/exam-import", label: "Importar", icon: Upload },
     { to: "/student-answers", label: "Respostas", icon: ClipboardList },
     { to: "/take-exam", label: "Aplicar Prova", icon: PenTool },
-  ];
-
-  const bottomLinks = [
     { to: "/profile", label: "Meu Perfil", icon: User },
   ];
 
@@ -84,27 +81,6 @@ const Layout = () => {
             </NavLink>
           ))}
         </nav>
-
-        {/* Bottom Links */}
-        <div className="py-4 px-3 border-t border-gray-200 space-y-1">
-          {bottomLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                  isActive
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-                } ${sidebarCollapsed ? "justify-center" : ""}`
-              }
-              title={sidebarCollapsed ? link.label : ""}
-            >
-              <link.icon className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span>{link.label}</span>}
-            </NavLink>
-          ))}
-        </div>
       </aside>
 
       {/* Mobile Header */}
@@ -130,7 +106,7 @@ const Layout = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="border-t border-gray-200 bg-white">
+          <div className="border-t border-gray-200 bg-white max-h-[70vh] overflow-y-auto">
             <nav className="py-2 px-3 space-y-1">
               {navLinks.map((link) => (
                 <NavLink
@@ -149,25 +125,6 @@ const Layout = () => {
                   <span>{link.label}</span>
                 </NavLink>
               ))}
-              <div className="border-t border-gray-200 pt-2 mt-2">
-                {bottomLinks.map((link) => (
-                  <NavLink
-                    key={link.to}
-                    to={link.to}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${
-                        isActive
-                          ? "bg-blue-600 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`
-                    }
-                  >
-                    <link.icon className="w-5 h-5" />
-                    <span>{link.label}</span>
-                  </NavLink>
-                ))}
-              </div>
             </nav>
           </div>
         )}
