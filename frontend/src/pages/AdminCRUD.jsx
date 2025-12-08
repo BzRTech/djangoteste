@@ -39,7 +39,6 @@ const AdminCRUD = () => {
     students: { page: 1, total: 1, count: 0 },
   });
 
-  const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -61,7 +60,6 @@ const AdminCRUD = () => {
 
   useEffect(() => {
     fetchAllData();
-    fetchCities();
   }, [
     pagination.schools.page,
     pagination.teachers.page,
@@ -120,35 +118,6 @@ const AdminCRUD = () => {
       console.error("Erro ao carregar dados:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchCities = async () => {
-    try {
-      let allCities = [];
-      let page = 1;
-      let hasMore = true;
-
-      // Busca todas as páginas de cidades
-      while (hasMore) {
-        const response = await fetch(`${API_BASE_URL}/cities/?page=${page}`);
-        const data = await response.json();
-        const citiesList = Array.isArray(data) ? data : data.results || [];
-        if (citiesList.length === 0) {
-          hasMore = false;
-        } else {
-          allCities = [...allCities, ...citiesList];
-          // Se não tem próxima página, para o loop
-          if (!data.next) {
-            hasMore = false;
-          } else {
-            page++;
-          }
-        }
-      }
-      setCities(allCities);
-    } catch (error) {
-      console.error("Erro ao carregar cidades:", error);
     }
   };
 
@@ -319,7 +288,6 @@ const AdminCRUD = () => {
                 {activeTab === "schools" && (
                   <SchoolForm
                     item={editingItem}
-                    cities={cities}
                     onClose={handleCloseForm}
                     onSave={fetchAllData}
                   />
@@ -655,7 +623,7 @@ const StudentsTable = ({ data, onEdit, onDelete }) => (
 // FORMULÁRIOS
 // ============================================
 
-const SchoolForm = ({ item, cities, onClose, onSave }) => {
+const SchoolForm = ({ item, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     school: item?.school || "",
     director_name: item?.director_name || "",
@@ -744,7 +712,7 @@ const SchoolForm = ({ item, cities, onClose, onSave }) => {
       <div>
         <SearchableDropdown
           label="Cidade *"
-          options={cities}
+          apiEndpoint="/cities/"
           value={formData.id_city}
           onChange={(value) => setFormData({ ...formData, id_city: value })}
           getOptionLabel={(city) => `${city.city} - ${city.state}`}
@@ -1104,7 +1072,12 @@ const ClassForm = ({ item, schools: initialSchools, teachers: initialTeachers, o
   };
 
   if (loading) {
-    return <Loading />;
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <span className="ml-2">Carregando...</span>
+      </div>
+    );
   }
 
   return (
@@ -1191,9 +1164,9 @@ const ClassForm = ({ item, schools: initialSchools, teachers: initialTeachers, o
           <SearchableDropdown
             label="Turno"
             options={[
-              { value: 'Manhã', label: 'Manhã' },
-              { value: 'Tarde', label: 'Tarde' },
-              { value: 'Integral', label: 'Integral' }
+              { value: 'morning', label: 'Manhã' },
+              { value: 'afternoon', label: 'Tarde' },
+              { value: 'evening', label: 'Noite' }
             ]}
             value={formData.shift}
             onChange={(value) => setFormData({ ...formData, shift: value })}
@@ -1435,50 +1408,16 @@ const ImportStudents = ({ onImportSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [schools, setSchools] = useState([]);
   const [selectedSchool, setSelectedSchool] = useState("");
-  const [loadingSchools, setLoadingSchools] = useState(true);
+  const [schoolsCount, setSchoolsCount] = useState(0);
 
-  // Carrega TODAS as escolas ao montar o componente (percorre todas as páginas)
-  useEffect(() => {
-    const fetchAllSchools = async () => {
-      try {
-        setLoadingSchools(true);
-        let allSchools = [];
-        let page = 1;
-        let hasMore = true;
-
-        // Busca todas as páginas de escolas
-        while (hasMore) {
-          const response = await fetch(`${API_BASE_URL}/schools/?page=${page}`);
-          const data = await response.json();
-          const schoolsList = Array.isArray(data) ? data : data.results || [];
-
-          if (schoolsList.length === 0) {
-            hasMore = false;
-          } else {
-            allSchools = [...allSchools, ...schoolsList];
-            // Se não tem próxima página, para o loop
-            if (!data.next) {
-              hasMore = false;
-            } else {
-              page++;
-            }
-          }
-        }
-
-        setSchools(allSchools);
-        if (allSchools.length > 0) {
-          setSelectedSchool(allSchools[0].id);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar escolas:", error);
-      } finally {
-        setLoadingSchools(false);
-      }
-    };
-    fetchAllSchools();
-  }, []);
+  // Callback quando as escolas são carregadas pelo SearchableDropdown
+  const handleSchoolsLoaded = (schools) => {
+    setSchoolsCount(schools.length);
+    if (schools.length > 0 && !selectedSchool) {
+      setSelectedSchool(schools[0].id);
+    }
+  };
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -1660,28 +1599,23 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
         <p className="text-sm text-gray-600 mb-3">
           Escolha a escola para a qual deseja importar os alunos. As turmas serão filtradas por esta escola.
         </p>
-        {loadingSchools ? (
-          <div className="flex items-center justify-center py-3">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-            <span className="ml-2 text-gray-600">Carregando escolas...</span>
-          </div>
-        ) : schools.length === 0 ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+        <SearchableDropdown
+          apiEndpoint="/schools/"
+          value={selectedSchool}
+          onChange={(value) => setSelectedSchool(value)}
+          getOptionLabel={(school) => school.school}
+          getOptionValue={(school) => school.id}
+          placeholder="Selecione uma escola..."
+          searchPlaceholder="Pesquisar escola..."
+          onDataLoaded={handleSchoolsLoaded}
+        />
+        {schoolsCount === 0 && (
+          <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
             <AlertCircle className="w-5 h-5 text-yellow-600 inline-block mr-2" />
             <span className="text-sm text-yellow-800">
               Nenhuma escola cadastrada. Cadastre escolas antes de importar alunos.
             </span>
           </div>
-        ) : (
-          <SearchableDropdown
-            options={schools}
-            value={selectedSchool}
-            onChange={(value) => setSelectedSchool(value)}
-            getOptionLabel={(school) => school.school}
-            getOptionValue={(school) => school.id}
-            placeholder="Selecione uma escola..."
-            searchPlaceholder="Pesquisar escola..."
-          />
         )}
       </div>
 
