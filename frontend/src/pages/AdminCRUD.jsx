@@ -46,16 +46,16 @@ const AdminCRUD = () => {
   const ITEMS_PER_PAGE = 10;
 
   const tabs = [
+    { id: "import", label: "Importar Alunos", icon: Upload, color: "gray" },
     { id: "schools", label: "Escolas", icon: School, color: "blue" },
+    { id: "classes", label: "Turmas", icon: BookOpen, color: "purple" },
     {
       id: "teachers",
       label: "Professores",
       icon: GraduationCap,
       color: "green",
     },
-    { id: "classes", label: "Turmas", icon: BookOpen, color: "purple" },
     { id: "students", label: "Alunos", icon: Users, color: "orange" },
-    { id: "import", label: "Importar", icon: Upload, color: "indigo" },
   ];
 
   useEffect(() => {
@@ -210,8 +210,8 @@ const AdminCRUD = () => {
                     setShowForm(false);
                   }}
                   className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${isActive
-                      ? "border-b-2 border-blue-600 text-blue-600"
-                      : "text-gray-600 hover:text-gray-800"
+                    ? "border-b-2 border-blue-600 text-blue-600"
+                    : "text-gray-600 hover:text-gray-800"
                     }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -250,16 +250,16 @@ const AdminCRUD = () => {
                     onDelete={handleDelete}
                   />
                 )}
+                {activeTab === "classes" && (
+                  <ClassesTable
+                  data={data.classes}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  />
+                )}
                 {activeTab === "teachers" && (
                   <TeachersTable
                     data={data.teachers}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                )}
-                {activeTab === "classes" && (
-                  <ClassesTable
-                    data={data.classes}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                   />
@@ -427,8 +427,8 @@ const TeachersTable = ({ data, onEdit, onDelete }) => (
             <td className="px-6 py-4 text-sm">
               <span
                 className={`px-2 py-1 rounded-full text-xs ${teacher.status === "active"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-gray-100 text-gray-800"
                   }`}
               >
                 {teacher.status === "active" ? "Ativo" : "Inativo"}
@@ -579,12 +579,12 @@ const StudentsTable = ({ data, onEdit, onDelete }) => (
             <td className="px-6 py-4 text-sm">
               <span
                 className={`px-2 py-1 rounded-full text-xs ${student.status === "enrolled"
-                    ? "bg-green-100 text-green-800"
-                    : student.status === "transferred"
-                      ? "bg-blue-100 text-blue-800"
-                      : student.status === "graduated"
-                        ? "bg-purple-100 text-purple-800"
-                        : "bg-gray-100 text-gray-800"
+                  ? "bg-green-100 text-green-800"
+                  : student.status === "transferred"
+                    ? "bg-blue-100 text-blue-800"
+                    : student.status === "graduated"
+                      ? "bg-purple-100 text-purple-800"
+                      : "bg-gray-100 text-gray-800"
                   }`}
               >
                 {student.status === "enrolled"
@@ -1209,7 +1209,7 @@ const StudentForm = ({ item, classes: initialClasses, onClose, onSave }) => {
     id_class: item?.id_class || "",
     enrollment_date:
       item?.enrollment_date || new Date().toISOString().split("T")[0],
-    status: item?.status || "enrolled",
+    status: item?.status || "Matriculado",
   });
   const [saving, setSaving] = useState(false);
   const [classes, setClasses] = useState([]);
@@ -1578,7 +1578,8 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
           </li>
           <li>
             <strong>Status</strong>: Status do aluno (opcional, padrão:
-            enrolled)
+            Matriculado). Valores aceitos: Matriculado, Transferido, Formado,
+            Desistente
           </li>
         </ul>
         <div className="mt-3 pt-3 border-t border-gray-300">
@@ -1621,8 +1622,8 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
       {/* Upload Area */}
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-gray-300 bg-white"
+          ? "border-indigo-500 bg-indigo-50"
+          : "border-gray-300 bg-white"
           }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -1694,8 +1695,8 @@ Pedro Oliveira,12347,5º Ano B,2025-01-15,Matriculado`;
       {result && (
         <div
           className={`mt-6 p-4 rounded-lg border ${result.success
-              ? "bg-green-50 border-green-200"
-              : "bg-red-50 border-red-200"
+            ? "bg-green-50 border-green-200"
+            : "bg-red-50 border-red-200"
             }`}
         >
           <div className="flex items-start gap-3">

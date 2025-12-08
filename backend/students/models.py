@@ -121,6 +121,7 @@ class TbClass(models.Model):
         db_table = 'tb_class'
         verbose_name = 'Turma'
         verbose_name_plural = 'Turmas'
+        ordering = ['-created_at', 'class_name']
 
     def __str__(self):
         return self.class_name
@@ -241,6 +242,7 @@ class TbExams(models.Model):
     school_year = models.IntegerField(blank=True, null=True)
     total_questions = models.IntegerField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    exam_file = models.CharField(max_length=500, blank=True, null=True)  # URL do arquivo no S3
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -248,6 +250,7 @@ class TbExams(models.Model):
         db_table = 'tb_exams'
         verbose_name = 'Exame'
         verbose_name_plural = 'Exames'
+        ordering = ['-created_at', 'exam_name']
 
     def __str__(self):
         return f"{self.exam_code} - {self.exam_name}"
