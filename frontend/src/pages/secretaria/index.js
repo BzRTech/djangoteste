@@ -1,0 +1,9 @@
+export { default as VisaoGeral } from './VisaoGeral';
+export { default as Desempenho } from './Desempenho';
+export { default as FluxoEscolar } from './FluxoEscolar';
+export { default as Frequencia } from './Frequencia';
+export { default as CorpoDocente } from './CorpoDocente';
+export { default as Infraestrutura } from './Infraestrutura';
+export { default as Financeiro } from './Financeiro';
+export { default as PerfilAlunos } from './PerfilAlunos';
+export { default as EscolaDetalhe } from './EscolaDetalhe';
