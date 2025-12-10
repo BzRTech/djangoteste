@@ -15,22 +15,43 @@ import {
   ChevronRight,
   Moon,
   Sun,
+  Building2,
+  BarChart3,
+  TrendingUp,
+  Calendar,
+  GraduationCap,
+  Building,
+  DollarSign,
+  Users,
+  ChevronDown,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
 const Layout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [secretariaExpanded, setSecretariaExpanded] = useState(true);
   const { darkMode, toggleDarkMode } = useTheme();
 
   const navLinks = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/descriptors", label: "Descritores", icon: BookOpen },
-    { to: "/admin", label: "Administração", icon: Settings },
+    { to: "/admin", label: "Administracao", icon: Settings },
     { to: "/exams", label: "Provas", icon: FileText },
     { to: "/exam-import", label: "Importar", icon: Upload },
     { to: "/student-answers", label: "Respostas", icon: ClipboardList },
     { to: "/take-exam", label: "Aplicar Prova", icon: PenTool },
+  ];
+
+  const secretariaLinks = [
+    { to: "/secretaria", label: "Visao Geral", icon: Building2 },
+    { to: "/secretaria/desempenho", label: "Desempenho", icon: BarChart3 },
+    { to: "/secretaria/fluxo", label: "Fluxo Escolar", icon: TrendingUp },
+    { to: "/secretaria/frequencia", label: "Frequencia", icon: Calendar },
+    { to: "/secretaria/professores", label: "Professores", icon: GraduationCap },
+    { to: "/secretaria/infraestrutura", label: "Infraestrutura", icon: Building },
+    { to: "/secretaria/financeiro", label: "Financeiro", icon: DollarSign },
+    { to: "/secretaria/alunos", label: "Perfil Alunos", icon: Users },
   ];
 
   return (
@@ -65,6 +86,50 @@ const Layout = () => {
 
         {/* Navigation Links */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+          {/* Secretaria Section */}
+          <div className="mb-2">
+            {!sidebarCollapsed && (
+              <button
+                onClick={() => setSecretariaExpanded(!secretariaExpanded)}
+                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <span>Secretaria de Educacao</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${secretariaExpanded ? '' : '-rotate-90'}`} />
+              </button>
+            )}
+            {(secretariaExpanded || sidebarCollapsed) && (
+              <div className="space-y-1">
+                {secretariaLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    end={link.to === "/secretaria"}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-all whitespace-nowrap text-sm ${
+                        isActive
+                          ? "bg-emerald-600 text-white shadow-md"
+                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-white"
+                      } ${sidebarCollapsed ? "justify-center" : ""}`
+                    }
+                    title={sidebarCollapsed ? link.label : ""}
+                  >
+                    <link.icon className="w-4 h-4 flex-shrink-0" />
+                    {!sidebarCollapsed && <span>{link.label}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
+
+          {/* School System Links */}
+          {!sidebarCollapsed && (
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Sistema Escolar
+            </div>
+          )}
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
@@ -152,8 +217,38 @@ const Layout = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[70vh] overflow-y-auto">
             <nav className="py-2 px-3 space-y-1">
+              {/* Secretaria Links - Mobile */}
+              <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Secretaria de Educacao
+              </div>
+              {secretariaLinks.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.to === "/secretaria"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
+                      isActive
+                        ? "bg-emerald-600 text-white"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`
+                  }
+                >
+                  <link.icon className="w-4 h-4" />
+                  <span>{link.label}</span>
+                </NavLink>
+              ))}
+
+              {/* Divider */}
+              <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+
+              {/* School System Links - Mobile */}
+              <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Sistema Escolar
+              </div>
               {navLinks.map((link) => (
                 <NavLink
                   key={link.to}
