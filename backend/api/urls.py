@@ -51,6 +51,21 @@ router.register(r'student-achievements', TbStudentDescriptorAchievementsViewSet,
 router.register(r'learning-progress', TbStudentLearningProgressViewSet, basename='learning-progress')
 router.register(r'student-profile', StudentProfileViewSet, basename='student-profile')
 
+# ============================================
+# ROTAS DASHBOARD SECRETARIA DE EDUCACAO
+# ============================================
+router.register(r'school-geolocation', TbSchoolGeolocationViewSet, basename='school-geolocation')
+router.register(r'student-attendance', TbStudentAttendanceViewSet, basename='student-attendance')
+router.register(r'class-attendance-summary', TbClassAttendanceSummaryViewSet, basename='class-attendance-summary')
+router.register(r'school-infrastructure', TbSchoolInfrastructureViewSet, basename='school-infrastructure')
+router.register(r'school-financial', TbSchoolFinancialViewSet, basename='school-financial')
+router.register(r'municipal-financial', TbMunicipalFinancialViewSet, basename='municipal-financial')
+router.register(r'school-flow-indicators', TbSchoolFlowIndicatorsViewSet, basename='school-flow-indicators')
+router.register(r'teacher-profiles', TbTeacherProfileViewSet, basename='teacher-profile')
+router.register(r'student-profiles', TbStudentProfileViewSet, basename='student-demographic-profile')
+router.register(r'alerts', TbAlertViewSet, basename='alert')
+router.register(r'dashboard-secretaria', DashboardSecretariaViewSet, basename='dashboard-secretaria')
+
 
 urlpatterns = [
     path('', include(router.urls)),

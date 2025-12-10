@@ -530,7 +530,251 @@ class TbQuestionDescriptorSerializer(serializers.ModelSerializer):
     class Meta:
         model = TbQuestionDescriptor
         fields = [
-            'id', 'id_question', 'question_text', 
-            'id_descriptor', 'descriptor_code', 'descriptor_name', 
+            'id', 'id_question', 'question_text',
+            'id_descriptor', 'descriptor_code', 'descriptor_name',
             'created_at'
         ]
+
+
+# ============================================
+# 8. DASHBOARD SECRETARIA DE EDUCACAO
+# ============================================
+
+class TbSchoolGeolocationSerializer(serializers.ModelSerializer):
+    """Serializer para geolocalizacao das escolas"""
+    school_name = serializers.CharField(source='id_school.school', read_only=True)
+
+    class Meta:
+        model = TbSchoolGeolocation
+        fields = [
+            'id', 'id_school', 'school_name', 'latitude', 'longitude',
+            'zona', 'created_at', 'updated_at'
+        ]
+
+
+class TbSchoolWithGeolocationSerializer(serializers.ModelSerializer):
+    """Serializer de escola incluindo geolocalizacao"""
+    city_name = serializers.CharField(source='id_city.city', read_only=True, allow_null=True)
+    state = serializers.CharField(source='id_city.state', read_only=True, allow_null=True)
+    geolocation = TbSchoolGeolocationSerializer(read_only=True)
+
+    class Meta:
+        model = TbSchool
+        fields = [
+            'id', 'school', 'director_name', 'id_city', 'city_name',
+            'state', 'address', 'codigo_ideb', 'geolocation', 'created_at'
+        ]
+
+
+class TbStudentAttendanceSerializer(serializers.ModelSerializer):
+    """Serializer para frequencia individual do aluno"""
+    student_name = serializers.CharField(source='id_student.student_name', read_only=True)
+    class_name = serializers.CharField(source='id_class.class_name', read_only=True)
+
+    class Meta:
+        model = TbStudentAttendance
+        fields = [
+            'id', 'id_student', 'student_name', 'id_class', 'class_name',
+            'attendance_date', 'status', 'justification', 'created_at'
+        ]
+
+
+class TbClassAttendanceSummarySerializer(serializers.ModelSerializer):
+    """Serializer para resumo de frequencia por turma"""
+    class_name = serializers.CharField(source='id_class.class_name', read_only=True)
+    school_name = serializers.CharField(source='id_class.id_school.school', read_only=True)
+
+    class Meta:
+        model = TbClassAttendanceSummary
+        fields = [
+            'id', 'id_class', 'class_name', 'school_name', 'year_month',
+            'school_days', 'total_presences', 'total_absences', 'total_justified',
+            'attendance_rate', 'created_at', 'updated_at'
+        ]
+
+
+class TbSchoolInfrastructureSerializer(serializers.ModelSerializer):
+    """Serializer completo para infraestrutura"""
+    school_name = serializers.CharField(source='id_school.school', read_only=True)
+
+    class Meta:
+        model = TbSchoolInfrastructure
+        fields = '__all__'
+
+
+class TbSchoolInfrastructureSummarySerializer(serializers.ModelSerializer):
+    """Serializer resumido para listagens"""
+    school_name = serializers.CharField(source='id_school.school', read_only=True)
+    total_recursos_tech = serializers.SerializerMethodField()
+    score_acessibilidade = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TbSchoolInfrastructure
+        fields = [
+            'id', 'id_school', 'school_name', 'num_salas', 'num_laboratorios',
+            'tem_biblioteca', 'tem_quadra', 'tem_internet', 'num_computadores',
+            'tem_acessibilidade', 'estado_conservacao', 'necessita_reforma',
+            'total_recursos_tech', 'score_acessibilidade'
+        ]
+
+    def get_total_recursos_tech(self, obj):
+        return obj.num_computadores + obj.num_tablets + obj.num_projetores
+
+    def get_score_acessibilidade(self, obj):
+        """Calcula score de acessibilidade (0-5)"""
+        score = 0
+        if obj.tem_acessibilidade:
+            score += 1
+        if obj.tem_rampa:
+            score += 1
+        if obj.tem_banheiro_pcd:
+            score += 1
+        if obj.tem_piso_tatil:
+            score += 1
+        if obj.tem_elevador:
+            score += 1
+        return score
+
+
+class TbSchoolFinancialSerializer(serializers.ModelSerializer):
+    """Serializer para dados financeiros por escola"""
+    school_name = serializers.CharField(source='id_school.school', read_only=True)
+    percentual_executado = serializers.SerializerMethodField()
+    total_despesas = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TbSchoolFinancial
+        fields = '__all__'
+        extra_fields = ['school_name', 'percentual_executado', 'total_despesas']
+
+    def get_fields(self):
+        fields = super().get_fields()
+        for field in self.Meta.extra_fields:
+            if field not in fields:
+                pass  # extra_fields são adicionados via SerializerMethodField
+        return fields
+
+    def get_percentual_executado(self, obj):
+        if obj.orcamento_total > 0:
+            return round((float(obj.orcamento_executado) / float(obj.orcamento_total)) * 100, 2)
+        return 0
+
+    def get_total_despesas(self, obj):
+        return float(
+            obj.despesa_pessoal + obj.despesa_material + obj.despesa_manutencao +
+            obj.despesa_alimentacao + obj.despesa_transporte + obj.despesa_equipamentos +
+            obj.despesa_outros
+        )
+
+
+class TbMunicipalFinancialSerializer(serializers.ModelSerializer):
+    """Serializer para dados financeiros municipais"""
+    percentual_executado = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TbMunicipalFinancial
+        fields = '__all__'
+
+    def get_percentual_executado(self, obj):
+        if obj.orcamento_total > 0:
+            return round((float(obj.orcamento_executado) / float(obj.orcamento_total)) * 100, 2)
+        return 0
+
+
+class TbSchoolFlowIndicatorsSerializer(serializers.ModelSerializer):
+    """Serializer para indicadores de fluxo escolar"""
+    school_name = serializers.CharField(source='id_school.school', read_only=True)
+
+    class Meta:
+        model = TbSchoolFlowIndicators
+        fields = '__all__'
+
+
+class TbTeacherProfileSerializer(serializers.ModelSerializer):
+    """Serializer para perfil do professor"""
+    teacher_name = serializers.CharField(source='id_teacher.teacher_name', read_only=True)
+    teacher_serial = serializers.IntegerField(source='id_teacher.teacher_serial', read_only=True)
+
+    class Meta:
+        model = TbTeacherProfile
+        fields = '__all__'
+
+
+class TbTeacherWithProfileSerializer(serializers.ModelSerializer):
+    """Serializer de professor incluindo perfil completo"""
+    profile = TbTeacherProfileSerializer(read_only=True)
+    subject_details = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = TbTeacher
+        fields = [
+            'id', 'teacher_serial', 'teacher_name', 'status',
+            'created_at', 'profile', 'subject_details'
+        ]
+
+    def get_subject_details(self, obj):
+        teacher_subjects = TbTeacherSubject.objects.filter(id_teacher=obj).select_related('id_subject')
+        return [ts.id_subject.subject_name for ts in teacher_subjects]
+
+
+class TbStudentProfileSerializer(serializers.ModelSerializer):
+    """Serializer para perfil demografico do aluno"""
+    student_name = serializers.CharField(source='id_student.student_name', read_only=True)
+    student_serial = serializers.IntegerField(source='id_student.student_serial', read_only=True)
+
+    class Meta:
+        model = TbStudentProfile
+        fields = '__all__'
+
+
+class TbStudentWithProfileSerializer(serializers.ModelSerializer):
+    """Serializer de aluno incluindo perfil completo"""
+    class_name = serializers.CharField(source='id_class.class_name', read_only=True, allow_null=True)
+    profile = TbStudentProfileSerializer(read_only=True)
+
+    class Meta:
+        model = TbStudents
+        fields = [
+            'id_student', 'student_serial', 'student_name',
+            'id_class', 'class_name', 'enrollment_date',
+            'status', 'created_at', 'profile'
+        ]
+
+
+class TbAlertSerializer(serializers.ModelSerializer):
+    """Serializer para alertas do dashboard"""
+    school_name = serializers.CharField(source='id_school.school', read_only=True, allow_null=True)
+
+    class Meta:
+        model = TbAlert
+        fields = '__all__'
+
+
+# ============================================
+# 9. SERIALIZERS AGREGADOS PARA DASHBOARD
+# ============================================
+
+class DashboardVisaoGeralSerializer(serializers.Serializer):
+    """Serializer para a visao geral do dashboard"""
+    total_escolas = serializers.IntegerField()
+    total_alunos = serializers.IntegerField()
+    total_professores = serializers.IntegerField()
+    total_turmas = serializers.IntegerField()
+    ideb_medio = serializers.DecimalField(max_digits=4, decimal_places=2, allow_null=True)
+    taxa_aprovacao = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+    taxa_frequencia = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+    orcamento_executado_percentual = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+
+
+class EscolaResumoSerializer(serializers.Serializer):
+    """Serializer para resumo de escola no mapa"""
+    id = serializers.IntegerField()
+    nome = serializers.CharField()
+    latitude = serializers.DecimalField(max_digits=10, decimal_places=7)
+    longitude = serializers.DecimalField(max_digits=10, decimal_places=7)
+    zona = serializers.CharField()
+    total_alunos = serializers.IntegerField()
+    ideb = serializers.DecimalField(max_digits=4, decimal_places=2, allow_null=True)
+    taxa_aprovacao = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+    taxa_frequencia = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+    estado_conservacao = serializers.CharField(allow_null=True)
