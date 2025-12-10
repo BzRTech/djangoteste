@@ -323,30 +323,18 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
         try:
             # Processa arquivo CSV
             if file_extension == 'csv':
-<<<<<<< HEAD
                  # Try multiple encodings to handle different file formats
                 file_content = file.read()
                 decoded_file = None
                 encodings_to_try = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
  
-=======
-                # Try multiple encodings to handle different file formats
-                file_content = file.read()
-                decoded_file = None
-                encodings_to_try = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-
->>>>>>> 3f7d6766b63901dccea2ce6c7e0110df946d8418
                 for encoding in encodings_to_try:
                     try:
                         decoded_file = file_content.decode(encoding)
                         break
                     except UnicodeDecodeError:
                         continue
-<<<<<<< HEAD
  
-=======
-
->>>>>>> 3f7d6766b63901dccea2ce6c7e0110df946d8418
                 if decoded_file is None:
                     return Response(
                         {'error': 'Erro ao processar arquivo: codificação não suportada. Por favor, salve o arquivo como UTF-8.'},
@@ -736,40 +724,23 @@ class TbExamsViewSet(viewsets.ModelViewSet):
         try:
             # Processa arquivo
             if file_extension == 'csv':
-<<<<<<< HEAD
                  # Try multiple encodings to handle different file formats
                 file_content = file.read()
                 decoded_file = None
                 encodings_to_try = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
  
-=======
-                # Try multiple encodings to handle different file formats
-                file_content = file.read()
-                decoded_file = None
-                encodings_to_try = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-
->>>>>>> 3f7d6766b63901dccea2ce6c7e0110df946d8418
                 for encoding in encodings_to_try:
                     try:
                         decoded_file = file_content.decode(encoding)
                         break
                     except UnicodeDecodeError:
                         continue
-<<<<<<< HEAD
- 
-=======
-
->>>>>>> 3f7d6766b63901dccea2ce6c7e0110df946d8418
                 if decoded_file is None:
                     return Response(
                         {'error': 'Erro ao processar arquivo: codificação não suportada. Por favor, salve o arquivo como UTF-8.'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-<<<<<<< HEAD
                 
-=======
-
->>>>>>> 3f7d6766b63901dccea2ce6c7e0110df946d8418
                 reader = csv.DictReader(io.StringIO(decoded_file))
                 rows = list(reader)
             else:
