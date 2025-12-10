@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Desempenho Educacional Municipal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+            padding: 24px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            color: #64748b;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .filter-select {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            padding: 10px 16px;
+            color: #e2e8f0;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .filter-select:hover, .filter-select:focus {
+            border-color: #3b82f6;
+            outline: none;
+        }
+        
+        /* Cards de Métricas */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 20px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+        }
+        
+        .stat-card .label {
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-card .value {
+            font-size: 42px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 8px 0;
+        }
+        
+        .stat-card .value.green {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+        
+        .stat-card .value.red {
+            background: linear-gradient(135deg, #ef4444, #f87171);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+        
+        .stat-card .subtitle {
+            color: #64748b;
+            font-size: 13px;
+        }
+        
+        /* Alertas */
+        .alerts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        
+        .alert-card {
+            padding: 16px 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .alert-card .icon {
+            font-size: 24px;
+        }
+        
+        .alert-card .title {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .alert-card .desc {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+        
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 6px;
+            border-radius: 16px;
+            width: fit-content;
+        }
+        
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #e2e8f0;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Cards de Gráficos */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .glass-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        
+        @media (max-width: 900px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        /* Tabela */
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            padding: 14px 16px;
+            background: rgba(15, 23, 42, 0.5);
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        th:first-child {
+            border-radius: 12px 0 0 0;
+        }
+        
+        th:last-child {
+            border-radius: 0 12px 0 0;
+        }
+        
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            font-size: 14px;
+        }
+        
+        tr:hover td {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .rank-num {
+            color: #64748b;
+            margin-right: 8px;
+        }
+        
+        .ideb-value {
+            font-weight: 600;
+            color: #60a5fa;
+        }
+        
+        .diff-positive {
+            color: #10b981;
+            font-weight: 500;
+        }
+        
+        .diff-negative {
+            color: #ef4444;
+            font-weight: 500;
+        }
+        
+        .trend {
+            font-weight: 500;
+        }
+        
+        .trend-up { color: #10b981; }
+        .trend-down { color: #ef4444; }
+        .trend-stable { color: #f59e0b; }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+        
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        
+        /* Footer */
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            text-align: center;
+            color: #475569;
+            font-size: 12px;
+        }
+        
+        footer p {
+            margin-top: 4px;
+        }
+
+        /* Legenda customizada */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div>
+            <h1>📊 Painel de Desempenho Educacional</h1>
+            <p>Secretaria Municipal de Educação • Dados IDEB 2023</p>
+        </div>
+        <div class="filters">
+            <select class="filter-select" id="filtroZona" onchange="aplicarFiltros()">
+                <option value="Todas">Todas as Zonas</option>
+                <option value="Urbana">Zona Urbana</option>
+                <option value="Rural">Zona Rural</option>
+            </select>
+            <select class="filter-select" id="filtroBairro" onchange="aplicarFiltros()">
+                <option value="Todos">Todos os Bairros</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Métricas -->
+    <div class="metrics-grid" id="metricsGrid">
+        <!-- Preenchido via JS -->
+    </div>
+
+    <!-- Alertas -->
+    <div class="alerts-grid" id="alertsGrid">
+        <!-- Preenchido via JS -->
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('visaoGeral')">Visão Geral</button>
+        <button class="tab-btn" onclick="showTab('ranking')">Ranking</button>
+        <button class="tab-btn" onclick="showTab('analise')">Análise Detalhada</button>
+        <button class="tab-btn" onclick="showTab('comparativo')">Comparativo</button>
+    </div>
+
+    <!-- Tab: Visão Geral -->
+    <div class="tab-content active" id="visaoGeral">
+        <div class="charts-grid">
+            <div class="glass-card">
+                <h3>📈 Evolução do IDEB Municipal</h3>
+                <div class="chart-container">
+                    <canvas id="chartEvolucao"></canvas>
+                </div>
+            </div>
+            <div class="glass-card">
+                <h3>🎯 Proficiência vs Taxa de Aprovação</h3>
+                <div class="chart-container">
+                    <canvas id="chartScatter"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-dot" style="background:#10b981"></span> Acima da meta</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> Próximo da meta</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> Abaixo da meta</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Ranking -->
+    <div class="tab-content" id="ranking">
+        <div class="glass-card">
+            <h3>🏅 Ranking de Escolas por IDEB 2023</h3>
+            <div class="chart-container" style="height: 500px;">
+                <canvas id="chartRanking"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Análise Detalhada -->
+    <div class="tab-content" id="analise">
+        <div class="glass-card">
+            <h3>📋 Tabela Detalhada das Escolas</h3>
+            <div class="table-container">
+                <table id="tabelaEscolas">
+                    <thead>
+                        <tr>
+                            <th>Escola</th>
+                            <th>IDEB 2023</th>
+                            <th>Meta</th>
+                            <th>Diferença</th>
+                            <th>Tendência</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaBody">
+                        <!-- Preenchido via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Comparativo -->
+    <div class="tab-content" id="comparativo">
+        <div class="charts-grid">
+            <div class="glass-card">
+                <h3>📊 Evolução por Escola (2019-2023)</h3>
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="chartEvolucaoEscolas"></canvas>
+                </div>
+            </div>
+            <div class="glass-card">
+                <h3>🎓 Taxa de Abandono e Distorção</h3>
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="chartIndicadores"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>Dashboard de Gestão Educacional • Dados simulados para demonstração</p>
+        <p>Desenvolvido para Secretaria Municipal de Educação</p>
+    </footer>
+
+    <script>
+        // Dados das escolas
+        const escolasData = [
+            { id: 1, nome: 'EM Prof. Maria Silva', bairro: 'Centro', zona: 'Urbana', alunos: 450, ideb2019: 5.2, ideb2021: 5.5, ideb2023: 5.8, meta: 5.6, proficiencia: 5.9, aprovacao: 0.98, abandono: 1.2, distorcao: 8.5 },
+            { id: 2, nome: 'EM João Pessoa', bairro: 'Centro', zona: 'Urbana', alunos: 380, ideb2019: 4.8, ideb2021: 5.0, ideb2023: 5.4, meta: 5.4, proficiencia: 5.5, aprovacao: 0.98, abandono: 1.5, distorcao: 10.2 },
+            { id: 3, nome: 'EM Monteiro Lobato', bairro: 'Vila Nova', zona: 'Urbana', alunos: 520, ideb2019: 4.5, ideb2021: 4.8, ideb2023: 5.2, meta: 5.2, proficiencia: 5.4, aprovacao: 0.96, abandono: 2.1, distorcao: 12.3 },
+            { id: 4, nome: 'EM Castro Alves', bairro: 'Vila Nova', zona: 'Urbana', alunos: 290, ideb2019: 5.0, ideb2021: 5.1, ideb2023: 5.0, meta: 5.5, proficiencia: 5.2, aprovacao: 0.96, abandono: 2.8, distorcao: 14.1 },
+            { id: 5, nome: 'EM Rui Barbosa', bairro: 'Jardim América', zona: 'Urbana', alunos: 410, ideb2019: 4.2, ideb2021: 4.6, ideb2023: 5.1, meta: 5.0, proficiencia: 5.3, aprovacao: 0.96, abandono: 2.3, distorcao: 11.8 },
+            { id: 6, nome: 'EM Cecília Meireles', bairro: 'Jardim América', zona: 'Urbana', alunos: 340, ideb2019: 5.5, ideb2021: 5.7, ideb2023: 6.0, meta: 5.8, proficiencia: 6.1, aprovacao: 0.98, abandono: 0.8, distorcao: 6.2 },
+            { id: 7, nome: 'EM Machado de Assis', bairro: 'Industrial', zona: 'Urbana', alunos: 480, ideb2019: 4.0, ideb2021: 4.2, ideb2023: 4.5, meta: 4.8, proficiencia: 4.7, aprovacao: 0.96, abandono: 3.5, distorcao: 18.2 },
+            { id: 8, nome: 'EM Drummond', bairro: 'Industrial', zona: 'Urbana', alunos: 360, ideb2019: 4.3, ideb2021: 4.5, ideb2023: 4.8, meta: 5.0, proficiencia: 5.0, aprovacao: 0.96, abandono: 3.1, distorcao: 15.6 },
+            { id: 9, nome: 'EM Rural São José', bairro: 'Zona Rural Norte', zona: 'Rural', alunos: 120, ideb2019: 3.8, ideb2021: 4.0, ideb2023: 4.3, meta: 4.5, proficiencia: 4.5, aprovacao: 0.96, abandono: 4.2, distorcao: 22.1 },
+            { id: 10, nome: 'EM Rural Boa Vista', bairro: 'Zona Rural Sul', zona: 'Rural', alunos: 85, ideb2019: 3.5, ideb2021: 3.8, ideb2023: 4.1, meta: 4.3, proficiencia: 4.3, aprovacao: 0.95, abandono: 5.1, distorcao: 25.3 },
+            { id: 11, nome: 'EM Vinícius de Moraes', bairro: 'Centro', zona: 'Urbana', alunos: 395, ideb2019: 5.3, ideb2021: 5.6, ideb2023: 5.9, meta: 5.7, proficiencia: 6.0, aprovacao: 0.98, abandono: 1.0, distorcao: 7.8 },
+            { id: 12, nome: 'EM Clarice Lispector', bairro: 'Jardim América', zona: 'Urbana', alunos: 310, ideb2019: 4.6, ideb2021: 4.9, ideb2023: 5.3, meta: 5.3, proficiencia: 5.5, aprovacao: 0.96, abandono: 2.0, distorcao: 11.2 },
+        ];
+
+        const evolucaoMunicipal = [
+            { ano: '2017', ideb: 4.3, meta: 4.5, estadual: 4.8, nacional: 5.0 },
+            { ano: '2019', ideb: 4.6, meta: 4.8, estadual: 5.0, nacional: 5.2 },
+            { ano: '2021', ideb: 4.9, meta: 5.0, estadual: 5.1, nacional: 5.3 },
+            { ano: '2023', ideb: 5.2, meta: 5.2, estadual: 5.3, nacional: 5.5 },
+        ];
+
+        let escolasFiltradas = [...escolasData];
+        let charts = {};
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            preencherBairros();
+            aplicarFiltros();
+        });
+
+        function preencherBairros() {
+            const bairros = [...new Set(escolasData.map(e => e.bairro))];
+            const select = document.getElementById('filtroBairro');
+            bairros.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b;
+                option.textContent = b;
+                select.appendChild(option);
+            });
+        }
+
+        function aplicarFiltros() {
+            const zona = document.getElementById('filtroZona').value;
+            const bairro = document.getElementById('filtroBairro').value;
+            
+            escolasFiltradas = escolasData.filter(e => {
+                if (zona !== 'Todas' && e.zona !== zona) return false;
+                if (bairro !== 'Todos' && e.bairro !== bairro) return false;
+                return true;
+            });
+            
+            atualizarDashboard();
+        }
+
+        function atualizarDashboard() {
+            atualizarMetricas();
+            atualizarAlertas();
+            atualizarTabela();
+            atualizarGraficos();
+        }
+
+        function atualizarMetricas() {
+            const mediaMunicipal = (escolasFiltradas.reduce((acc, e) => acc + e.ideb2023, 0) / escolasFiltradas.length).toFixed(2);
+            const metaMedia = (escolasFiltradas.reduce((acc, e) => acc + e.meta, 0) / escolasFiltradas.length).toFixed(2);
+            const totalAlunos = escolasFiltradas.reduce((acc, e) => acc + e.alunos, 0);
+            const acimaMeta = escolasFiltradas.filter(e => e.ideb2023 >= e.meta).length;
+            const abaixoMeta = escolasFiltradas.filter(e => e.ideb2023 < e.meta).length;
+            const atingiuMeta = parseFloat(mediaMunicipal) >= parseFloat(metaMedia);
+
+            document.getElementById('metricsGrid').innerHTML = `
+                <div class="stat-card">
+                    <p class="label">IDEB Municipal</p>
+                    <p class="value">${mediaMunicipal}</p>
+                    <p class="subtitle">Meta: ${metaMedia} • ${atingiuMeta ? '✅ Atingida' : '⚠️ Não atingida'}</p>
+                </div>
+                <div class="stat-card">
+                    <p class="label">Escolas Monitoradas</p>
+                    <p class="value">${escolasFiltradas.length}</p>
+                    <p class="subtitle">${totalAlunos.toLocaleString()} alunos</p>
+                </div>
+                <div class="stat-card">
+                    <p class="label">Acima da Meta</p>
+                    <p class="value green">${acimaMeta}</p>
+                    <p class="subtitle">${((acimaMeta / escolasFiltradas.length) * 100).toFixed(0)}% das escolas</p>
+                </div>
+                <div class="stat-card">
+                    <p class="label">Abaixo da Meta</p>
+                    <p class="value red">${abaixoMeta}</p>
+                    <p class="subtitle">Requerem atenção especial</p>
+                </div>
+            `;
+        }
+
+        function atualizarAlertas() {
+            const maiorCrescimento = escolasFiltradas.reduce((max, e) => {
+                const crescimento = e.ideb2023 - e.ideb2019;
+                return crescimento > (max.ideb2023 - max.ideb2019) ? e : max;
+            }, escolasFiltradas[0]);
+
+            const menorIdeb = escolasFiltradas.reduce((min, e) => 
+                e.ideb2023 < min.ideb2023 ? e : min, escolasFiltradas[0]);
+
+            const crescimentoMunicipal = ((5.2 / 4.6 - 1) * 100).toFixed(1);
+
+            document.getElementById('alertsGrid').innerHTML = `
+                <div class="alert-card alert-success">
+                    <span class="icon">🏆</span>
+                    <div>
+                        <p class="title">Maior Crescimento</p>
+                        <p class="desc">${maiorCrescimento.nome} (+${(maiorCrescimento.ideb2023 - maiorCrescimento.ideb2019).toFixed(1)} pts)</p>
+                    </div>
+                </div>
+                <div class="alert-card alert-danger">
+                    <span class="icon">⚠️</span>
+                    <div>
+                        <p class="title">Atenção Prioritária</p>
+                        <p class="desc">${menorIdeb.nome} (IDEB: ${menorIdeb.ideb2023})</p>
+                    </div>
+                </div>
+                <div class="alert-card alert-warning">
+                    <span class="icon">📈</span>
+                    <div>
+                        <p class="title">Tendência Municipal</p>
+                        <p class="desc">Crescimento de ${crescimentoMunicipal}% desde 2019</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function atualizarTabela() {
+            const sorted = [...escolasFiltradas].sort((a, b) => b.ideb2023 - a.ideb2023);
+            
+            document.getElementById('tabelaBody').innerHTML = sorted.map((e, i) => {
+                const diff = (e.ideb2023 - e.meta).toFixed(2);
+                const tendencia = e.ideb2023 - e.ideb2021;
+                const status = e.ideb2023 >= e.meta ? 'success' : e.ideb2023 >= e.meta - 0.3 ? 'warning' : 'danger';
+                const statusText = status === 'success' ? 'Atingiu' : status === 'warning' ? 'Próximo' : 'Abaixo';
+                
+                return `
+                    <tr>
+                        <td><span class="rank-num">#${i + 1}</span> ${e.nome}</td>
+                        <td class="ideb-value">${e.ideb2023.toFixed(1)}</td>
+                        <td>${e.meta.toFixed(1)}</td>
+                        <td class="${parseFloat(diff) >= 0 ? 'diff-positive' : 'diff-negative'}">
+                            ${parseFloat(diff) >= 0 ? '+' : ''}${diff}
+                        </td>
+                        <td class="trend ${tendencia > 0 ? 'trend-up' : tendencia < 0 ? 'trend-down' : 'trend-stable'}">
+                            ${tendencia > 0 ? '↑' : tendencia < 0 ? '↓' : '→'} ${Math.abs(tendencia).toFixed(1)}
+                        </td>
+                        <td><span class="badge badge-${status}">${statusText}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function atualizarGraficos() {
+            // Destruir gráficos existentes
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+
+            // Configuração padrão
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = 'rgba(148, 163, 184, 0.1)';
+
+            // Gráfico de Evolução Municipal
+            const ctxEvolucao = document.getElementById('chartEvolucao').getContext('2d');
+            charts.evolucao = new Chart(ctxEvolucao, {
+                type: 'line',
+                data: {
+                    labels: evolucaoMunicipal.map(e => e.ano),
+                    datasets: [
+                        {
+                            label: 'IDEB Municipal',
+                            data: evolucaoMunicipal.map(e => e.ideb),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3
+                        },
+                        {
+                            label: 'Meta',
+                            data: evolucaoMunicipal.map(e => e.meta),
+                            borderColor: '#f59e0b',
+                            borderDash: [5, 5],
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Média Estadual',
+                            data: evolucaoMunicipal.map(e => e.estadual),
+                            borderColor: '#8b5cf6',
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Média Nacional',
+                            data: evolucaoMunicipal.map(e => e.nacional),
+                            borderColor: '#ec4899',
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, padding: 15 }
+                        }
+                    },
+                    scales: {
+                        y: { min: 3.5, max: 6 }
+                    }
+                }
+            });
+
+            // Gráfico Scatter
+            const ctxScatter = document.getElementById('chartScatter').getContext('2d');
+            charts.scatter = new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Escolas',
+                        data: escolasFiltradas.map(e => ({
+                            x: e.proficiencia,
+                            y: e.aprovacao * 100,
+                            nome: e.nome,
+                            ideb: e.ideb2023,
+                            meta: e.meta
+                        })),
+                        backgroundColor: escolasFiltradas.map(e => 
+                            e.ideb2023 >= e.meta ? '#10b981' : 
+                            e.ideb2023 >= e.meta - 0.3 ? '#f59e0b' : '#ef4444'
+                        ),
+                        pointRadius: 10,
+                        pointHoverRadius: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    const d = ctx.raw;
+                                    return `${d.nome}: Prof. ${d.x}, Aprov. ${d.y.toFixed(0)}%, IDEB ${d.ideb}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            title: { display: true, text: 'Proficiência' },
+                            min: 4, max: 6.5
+                        },
+                        y: { 
+                            title: { display: true, text: 'Taxa de Aprovação (%)' },
+                            min: 94, max: 100
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Ranking
+            const sorted = [...escolasFiltradas].sort((a, b) => b.ideb2023 - a.ideb2023);
+            const ctxRanking = document.getElementById('chartRanking').getContext('2d');
+            charts.ranking = new Chart(ctxRanking, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(e => e.nome.replace('EM ', '')),
+                    datasets: [{
+                        label: 'IDEB 2023',
+                        data: sorted.map(e => e.ideb2023),
+                        backgroundColor: sorted.map(e => 
+                            e.ideb2023 >= e.meta ? '#10b981' : 
+                            e.ideb2023 >= e.meta - 0.3 ? '#f59e0b' : '#ef4444'
+                        ),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    xMin: 5.2,
+                                    xMax: 5.2,
+                                    borderColor: '#f59e0b',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5]
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { min: 0, max: 7 }
+                    }
+                }
+            });
+
+            // Gráfico de Evolução das Escolas
+            const cores = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#14b8a6', '#a855f7'];
+            const ctxEvolucaoEscolas = document.getElementById('chartEvolucaoEscolas').getContext('2d');
+            charts.evolucaoEscolas = new Chart(ctxEvolucaoEscolas, {
+                type: 'line',
+                data: {
+                    labels: ['2019', '2021', '2023'],
+                    datasets: escolasFiltradas.slice(0, 6).map((e, i) => ({
+                        label: e.nome.replace('EM ', '').substring(0, 15),
+                        data: [e.ideb2019, e.ideb2021, e.ideb2023],
+                        borderColor: cores[i],
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 4
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, padding: 10, font: { size: 10 } }
+                        }
+                    },
+                    scales: {
+                        y: { min: 3, max: 7 }
+                    }
+                }
+            });
+
+            // Gráfico de Indicadores
+            const top8 = escolasFiltradas.slice(0, 8);
+            const ctxIndicadores = document.getElementById('chartIndicadores').getContext('2d');
+            charts.indicadores = new Chart(ctxIndicadores, {
+                type: 'bar',
+                data: {
+                    labels: top8.map(e => e.nome.replace('EM ', '').substring(0, 12)),
+                    datasets: [
+                        {
+                            label: 'Taxa de Abandono (%)',
+                            data: top8.map(e => e.abandono),
+                            backgroundColor: '#ef4444',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Distorção Idade-Série (%)',
+                            data: top8.map(e => e.distorcao),
+                            backgroundColor: '#f59e0b',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, padding: 15 }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { maxRotation: 45, minRotation: 45 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showTab(tabId) {
+            // Atualizar botões
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Atualizar conteúdo
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        }
+    </script>
+</body>
+</html>

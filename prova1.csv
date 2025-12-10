@@ -1,0 +1,6 @@
+﻿codigo_prova,nome_prova,disciplina,ano_escolar,numero_questao,resposta_correta,codigo_descritor,pontos,dificuldade,enunciado
+PROVA2024_MAT_5,Avaliação Diagnóstica Matemática,Matemática,5,1,A,D01,1.0,easy,Qual é o resultado de 5 + 3?
+PROVA2024_MAT_5,Avaliação Diagnóstica Matemática,Matemática,5,2,C,D02,1.5,medium,Resolva a equação 2x = 10
+PROVA2024_MAT_5,Avaliação Diagnóstica Matemática,Matemática,5,3,B,D01,1.0,hard,Calcule a área de um quadrado de lado 4cm
+PROVA2024_MAT_5,Avaliação Diagnóstica Matemática,Matemática,5,4,D,D03,1.0,easy,Quanto é 12 ÷ 3?
+PROVA2024_MAT_5,Avaliação Diagnóstica Matemática,Matemática,5,5,E,D02,2.0,medium,Qual é o próximo número da sequência: 2, 4, 6, 8, __?
