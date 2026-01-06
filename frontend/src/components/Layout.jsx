@@ -45,10 +45,10 @@ const Layout = () => {
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
           <Link to="/dashboard" className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">I+</span>
+              <span className="text-white font-bold text-lg">+ </span>
             </div>
             {!sidebarCollapsed && (
-              <span className="text-2xl font-bold text-gray-800 dark:text-white">IDEB+</span>
+              <span className="text-2xl font-bold text-gray-800 dark:text-white">SIDEB+</span>
             )}
           </Link>
           <button
