@@ -21,7 +21,8 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'corsheaders',
-    'django_filters',  # Adicione esta linha
+    'django_filters',
+    'storages',  # AWS S3 storage
     
     # Local apps
     'students',
