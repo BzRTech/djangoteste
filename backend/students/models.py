@@ -497,3 +497,458 @@ class TbQuestionDescriptor(models.Model):
     class Meta:
         managed = True
         db_table = 'tb_question_descriptor'
+
+
+# ============================================
+# MODELOS PARA DASHBOARD SECRETARIA DE EDUCACAO
+# ============================================
+
+class TbSchoolGeolocation(models.Model):
+    """Geolocalizacao das escolas para mapa interativo"""
+    id = models.AutoField(primary_key=True)
+    id_school = models.OneToOneField(
+        TbSchool,
+        on_delete=models.CASCADE,
+        db_column='id_school',
+        related_name='geolocation'
+    )
+    latitude = models.DecimalField(max_digits=10, decimal_places=7)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7)
+    zona = models.CharField(max_length=20, choices=[
+        ('urbana', 'Urbana'),
+        ('rural', 'Rural')
+    ], default='urbana')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_school_geolocation'
+        verbose_name = 'Geolocalizacao da Escola'
+        verbose_name_plural = 'Geolocalizacoes das Escolas'
+
+    def __str__(self):
+        return f"{self.id_school.school} ({self.latitude}, {self.longitude})"
+
+
+class TbStudentAttendance(models.Model):
+    """Registro de frequencia diaria dos alunos"""
+    id = models.AutoField(primary_key=True)
+    id_student = models.ForeignKey(
+        TbStudents,
+        on_delete=models.CASCADE,
+        db_column='id_student',
+        related_name='attendances'
+    )
+    id_class = models.ForeignKey(
+        TbClass,
+        on_delete=models.CASCADE,
+        db_column='id_class',
+        related_name='attendances'
+    )
+    attendance_date = models.DateField()
+    status = models.CharField(max_length=20, choices=[
+        ('presente', 'Presente'),
+        ('ausente', 'Ausente'),
+        ('justificado', 'Falta Justificada'),
+        ('atrasado', 'Atrasado')
+    ])
+    justification = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_student_attendance'
+        verbose_name = 'Frequencia do Aluno'
+        verbose_name_plural = 'Frequencias dos Alunos'
+        unique_together = [['id_student', 'attendance_date']]
+        ordering = ['-attendance_date']
+
+    def __str__(self):
+        return f"{self.id_student.student_name} - {self.attendance_date} - {self.status}"
+
+
+class TbClassAttendanceSummary(models.Model):
+    """Resumo mensal de frequencia por turma"""
+    id = models.AutoField(primary_key=True)
+    id_class = models.ForeignKey(
+        TbClass,
+        on_delete=models.CASCADE,
+        db_column='id_class',
+        related_name='attendance_summaries'
+    )
+    year_month = models.CharField(max_length=7)  # Format: YYYY-MM
+    school_days = models.IntegerField(default=0)
+    total_presences = models.IntegerField(default=0)
+    total_absences = models.IntegerField(default=0)
+    total_justified = models.IntegerField(default=0)
+    attendance_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_class_attendance_summary'
+        verbose_name = 'Resumo de Frequencia da Turma'
+        verbose_name_plural = 'Resumos de Frequencia das Turmas'
+        unique_together = [['id_class', 'year_month']]
+
+    def __str__(self):
+        return f"{self.id_class.class_name} - {self.year_month} - {self.attendance_rate}%"
+
+
+class TbSchoolInfrastructure(models.Model):
+    """Infraestrutura das escolas"""
+    id = models.AutoField(primary_key=True)
+    id_school = models.OneToOneField(
+        TbSchool,
+        on_delete=models.CASCADE,
+        db_column='id_school',
+        related_name='infrastructure'
+    )
+    # Espacos fisicos
+    num_salas = models.IntegerField(default=0)
+    num_laboratorios = models.IntegerField(default=0)
+    tem_biblioteca = models.BooleanField(default=False)
+    tem_quadra = models.BooleanField(default=False)
+    tem_quadra_coberta = models.BooleanField(default=False)
+    tem_refeitorio = models.BooleanField(default=False)
+    tem_auditorio = models.BooleanField(default=False)
+    tem_sala_leitura = models.BooleanField(default=False)
+    tem_sala_professores = models.BooleanField(default=False)
+    tem_sala_atendimento = models.BooleanField(default=False)
+
+    # Tecnologia
+    tem_internet = models.BooleanField(default=False)
+    tipo_internet = models.CharField(max_length=50, blank=True, null=True)  # fibra, radio, etc
+    velocidade_internet_mbps = models.IntegerField(blank=True, null=True)
+    num_computadores = models.IntegerField(default=0)
+    num_tablets = models.IntegerField(default=0)
+    tem_projetor = models.BooleanField(default=False)
+    num_projetores = models.IntegerField(default=0)
+
+    # Acessibilidade
+    tem_acessibilidade = models.BooleanField(default=False)
+    tem_rampa = models.BooleanField(default=False)
+    tem_banheiro_pcd = models.BooleanField(default=False)
+    tem_piso_tatil = models.BooleanField(default=False)
+    tem_elevador = models.BooleanField(default=False)
+
+    # Servicos basicos
+    tem_agua_potavel = models.BooleanField(default=True)
+    tem_energia = models.BooleanField(default=True)
+    tem_esgoto = models.BooleanField(default=True)
+    tem_coleta_lixo = models.BooleanField(default=True)
+
+    # Conservacao
+    estado_conservacao = models.CharField(max_length=20, choices=[
+        ('otimo', 'Otimo'),
+        ('bom', 'Bom'),
+        ('regular', 'Regular'),
+        ('ruim', 'Ruim'),
+        ('critico', 'Critico')
+    ], default='bom')
+    ultima_reforma = models.DateField(blank=True, null=True)
+    necessita_reforma = models.BooleanField(default=False)
+    areas_reforma = models.TextField(blank=True, null=True)  # JSON list of areas
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_school_infrastructure'
+        verbose_name = 'Infraestrutura da Escola'
+        verbose_name_plural = 'Infraestruturas das Escolas'
+
+    def __str__(self):
+        return f"Infraestrutura - {self.id_school.school}"
+
+
+class TbSchoolFinancial(models.Model):
+    """Dados financeiros por escola por ano"""
+    id = models.AutoField(primary_key=True)
+    id_school = models.ForeignKey(
+        TbSchool,
+        on_delete=models.CASCADE,
+        db_column='id_school',
+        related_name='financial_records'
+    )
+    fiscal_year = models.IntegerField()
+
+    # Orcamento
+    orcamento_total = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    orcamento_executado = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    # Categorias de despesa
+    despesa_pessoal = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    despesa_material = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    despesa_manutencao = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    despesa_alimentacao = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    despesa_transporte = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    despesa_equipamentos = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    despesa_outros = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    # Receitas
+    fundeb_recebido = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    pdde_recebido = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    outras_receitas = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_school_financial'
+        verbose_name = 'Dados Financeiros da Escola'
+        verbose_name_plural = 'Dados Financeiros das Escolas'
+        unique_together = [['id_school', 'fiscal_year']]
+        ordering = ['-fiscal_year']
+
+    def __str__(self):
+        return f"{self.id_school.school} - {self.fiscal_year}"
+
+    @property
+    def percentual_executado(self):
+        if self.orcamento_total > 0:
+            return (self.orcamento_executado / self.orcamento_total) * 100
+        return 0
+
+    @property
+    def custo_por_aluno(self):
+        total_alunos = self.id_school.tbclass_set.aggregate(
+            total=models.Count('tbstudents')
+        )['total'] or 1
+        return self.orcamento_executado / total_alunos
+
+
+class TbMunicipalFinancial(models.Model):
+    """Dados financeiros consolidados do municipio por ano"""
+    id = models.AutoField(primary_key=True)
+    fiscal_year = models.IntegerField(unique=True)
+
+    # Orcamento total
+    orcamento_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    orcamento_executado = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    # Receitas
+    fundeb_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    fnde_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    recursos_proprios = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    outras_receitas = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    # Indicadores
+    percentual_mde = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # % aplicado em MDE
+    custo_aluno_ano = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_municipal_financial'
+        verbose_name = 'Financeiro Municipal'
+        verbose_name_plural = 'Financeiro Municipal'
+        ordering = ['-fiscal_year']
+
+    def __str__(self):
+        return f"Financeiro Municipal - {self.fiscal_year}"
+
+
+class TbSchoolFlowIndicators(models.Model):
+    """Indicadores de fluxo escolar (aprovacao, reprovacao, abandono)"""
+    id = models.AutoField(primary_key=True)
+    id_school = models.ForeignKey(
+        TbSchool,
+        on_delete=models.CASCADE,
+        db_column='id_school',
+        related_name='flow_indicators'
+    )
+    fiscal_year = models.IntegerField()
+    etapa = models.CharField(max_length=50, choices=[
+        ('anos_iniciais', 'Anos Iniciais'),
+        ('anos_finais', 'Anos Finais'),
+        ('eja', 'EJA')
+    ])
+
+    total_matriculas = models.IntegerField(default=0)
+    total_aprovados = models.IntegerField(default=0)
+    total_reprovados = models.IntegerField(default=0)
+    total_abandono = models.IntegerField(default=0)
+    total_transferidos = models.IntegerField(default=0)
+
+    taxa_aprovacao = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    taxa_reprovacao = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    taxa_abandono = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    distorcao_idade_serie = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_school_flow_indicators'
+        verbose_name = 'Indicador de Fluxo Escolar'
+        verbose_name_plural = 'Indicadores de Fluxo Escolar'
+        unique_together = [['id_school', 'fiscal_year', 'etapa']]
+        ordering = ['-fiscal_year']
+
+    def __str__(self):
+        return f"{self.id_school.school} - {self.fiscal_year} - {self.etapa}"
+
+
+class TbTeacherProfile(models.Model):
+    """Perfil estendido do professor"""
+    id = models.AutoField(primary_key=True)
+    id_teacher = models.OneToOneField(
+        TbTeacher,
+        on_delete=models.CASCADE,
+        db_column='id_teacher',
+        related_name='profile'
+    )
+
+    # Formacao
+    escolaridade = models.CharField(max_length=50, choices=[
+        ('medio', 'Ensino Medio'),
+        ('graduacao', 'Graduacao'),
+        ('especializacao', 'Especializacao'),
+        ('mestrado', 'Mestrado'),
+        ('doutorado', 'Doutorado')
+    ], default='graduacao')
+    formacao_area = models.CharField(max_length=100, blank=True, null=True)
+    formacao_continuada = models.BooleanField(default=False)
+
+    # Vinculo
+    tipo_contrato = models.CharField(max_length=50, choices=[
+        ('efetivo', 'Efetivo'),
+        ('temporario', 'Temporario'),
+        ('clt', 'CLT')
+    ], default='efetivo')
+    carga_horaria = models.IntegerField(default=40)  # horas semanais
+
+    # Dados pessoais
+    data_nascimento = models.DateField(blank=True, null=True)
+    genero = models.CharField(max_length=20, blank=True, null=True)
+    anos_experiencia = models.IntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_teacher_profile'
+        verbose_name = 'Perfil do Professor'
+        verbose_name_plural = 'Perfis dos Professores'
+
+    def __str__(self):
+        return f"Perfil - {self.id_teacher.teacher_name}"
+
+
+class TbStudentProfile(models.Model):
+    """Perfil demografico estendido do aluno"""
+    id = models.AutoField(primary_key=True)
+    id_student = models.OneToOneField(
+        TbStudents,
+        on_delete=models.CASCADE,
+        db_column='id_student',
+        related_name='profile'
+    )
+
+    # Dados pessoais
+    data_nascimento = models.DateField(blank=True, null=True)
+    genero = models.CharField(max_length=20, choices=[
+        ('masculino', 'Masculino'),
+        ('feminino', 'Feminino'),
+        ('outro', 'Outro')
+    ], blank=True, null=True)
+    raca_cor = models.CharField(max_length=30, choices=[
+        ('branca', 'Branca'),
+        ('preta', 'Preta'),
+        ('parda', 'Parda'),
+        ('amarela', 'Amarela'),
+        ('indigena', 'Indigena'),
+        ('nao_declarada', 'Nao Declarada')
+    ], blank=True, null=True)
+
+    # Necessidades especiais
+    tem_deficiencia = models.BooleanField(default=False)
+    tipo_deficiencia = models.CharField(max_length=100, blank=True, null=True)
+    necessita_aee = models.BooleanField(default=False)  # Atendimento Educacional Especializado
+
+    # Dados socioeconomicos
+    bolsa_familia = models.BooleanField(default=False)
+    nivel_socioeconomico = models.CharField(max_length=30, choices=[
+        ('muito_baixo', 'Muito Baixo'),
+        ('baixo', 'Baixo'),
+        ('medio_baixo', 'Medio-Baixo'),
+        ('medio', 'Medio'),
+        ('medio_alto', 'Medio-Alto'),
+        ('alto', 'Alto')
+    ], blank=True, null=True)
+
+    # Transporte
+    utiliza_transporte_escolar = models.BooleanField(default=False)
+    distancia_escola_km = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+
+    # Localizacao
+    zona_residencia = models.CharField(max_length=20, choices=[
+        ('urbana', 'Urbana'),
+        ('rural', 'Rural')
+    ], default='urbana')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_student_profile'
+        verbose_name = 'Perfil do Aluno'
+        verbose_name_plural = 'Perfis dos Alunos'
+
+    def __str__(self):
+        return f"Perfil - {self.id_student.student_name}"
+
+
+class TbAlert(models.Model):
+    """Sistema de alertas para o dashboard"""
+    id = models.AutoField(primary_key=True)
+    id_school = models.ForeignKey(
+        TbSchool,
+        on_delete=models.CASCADE,
+        db_column='id_school',
+        related_name='alerts',
+        blank=True,
+        null=True  # null = alerta geral do municipio
+    )
+
+    tipo = models.CharField(max_length=50, choices=[
+        ('frequencia', 'Frequencia'),
+        ('desempenho', 'Desempenho'),
+        ('infraestrutura', 'Infraestrutura'),
+        ('financeiro', 'Financeiro'),
+        ('docente', 'Corpo Docente'),
+        ('fluxo', 'Fluxo Escolar')
+    ])
+    severidade = models.CharField(max_length=20, choices=[
+        ('baixa', 'Baixa'),
+        ('media', 'Media'),
+        ('alta', 'Alta'),
+        ('critica', 'Critica')
+    ])
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField()
+    data_geracao = models.DateTimeField(auto_now_add=True)
+    data_resolucao = models.DateTimeField(blank=True, null=True)
+    resolvido = models.BooleanField(default=False)
+
+    class Meta:
+        managed = True
+        db_table = 'tb_alert'
+        verbose_name = 'Alerta'
+        verbose_name_plural = 'Alertas'
+        ordering = ['-data_geracao']
+
+    def __str__(self):
+        escola = self.id_school.school if self.id_school else "Municipal"
+        return f"[{self.severidade}] {self.titulo} - {escola}"

@@ -1728,3 +1728,515 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
                 {'error': f'Erro ao processar solicitação: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+# ============================================
+# VIEWSETS DASHBOARD SECRETARIA DE EDUCACAO
+# ============================================
+
+class TbSchoolGeolocationViewSet(viewsets.ModelViewSet):
+    """Geolocalizacao das escolas"""
+    queryset = TbSchoolGeolocation.objects.all().select_related('id_school')
+    serializer_class = TbSchoolGeolocationSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['id_school', 'zona']
+
+
+class TbStudentAttendanceViewSet(viewsets.ModelViewSet):
+    """Frequencia dos alunos"""
+    queryset = TbStudentAttendance.objects.all().select_related('id_student', 'id_class')
+    serializer_class = TbStudentAttendanceSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['id_student', 'id_class', 'status', 'attendance_date']
+    ordering_fields = ['attendance_date', 'created_at']
+
+    @action(detail=False, methods=['post'])
+    def bulk_register(self, request):
+        """Registro em lote de frequencia para uma turma"""
+        id_class = request.data.get('id_class')
+        attendance_date = request.data.get('attendance_date')
+        attendances = request.data.get('attendances', [])
+
+        if not id_class or not attendance_date or not attendances:
+            return Response(
+                {'error': 'id_class, attendance_date e attendances sao obrigatorios'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created = 0
+        updated = 0
+        errors = []
+
+        with transaction.atomic():
+            for att in attendances:
+                try:
+                    obj, was_created = TbStudentAttendance.objects.update_or_create(
+                        id_student_id=att['id_student'],
+                        attendance_date=attendance_date,
+                        defaults={
+                            'id_class_id': id_class,
+                            'status': att.get('status', 'presente'),
+                            'justification': att.get('justification')
+                        }
+                    )
+                    if was_created:
+                        created += 1
+                    else:
+                        updated += 1
+                except Exception as e:
+                    errors.append(f"Aluno {att.get('id_student')}: {str(e)}")
+
+        return Response({
+            'success': True,
+            'created': created,
+            'updated': updated,
+            'errors': errors if errors else None
+        })
+
+
+class TbClassAttendanceSummaryViewSet(viewsets.ModelViewSet):
+    """Resumo de frequencia por turma"""
+    queryset = TbClassAttendanceSummary.objects.all().select_related('id_class', 'id_class__id_school')
+    serializer_class = TbClassAttendanceSummarySerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['id_class', 'year_month']
+    ordering_fields = ['year_month', 'attendance_rate']
+
+    @action(detail=False, methods=['post'])
+    def calculate_summary(self, request):
+        """Calcula resumo de frequencia para um mes"""
+        id_class = request.data.get('id_class')
+        year_month = request.data.get('year_month')  # Format: YYYY-MM
+
+        if not id_class or not year_month:
+            return Response(
+                {'error': 'id_class e year_month sao obrigatorios'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Busca todas as frequencias do mes
+        attendances = TbStudentAttendance.objects.filter(
+            id_class_id=id_class,
+            attendance_date__startswith=year_month
+        )
+
+        # Calcula estatisticas
+        total_records = attendances.count()
+        presences = attendances.filter(status='presente').count()
+        absences = attendances.filter(status='ausente').count()
+        justified = attendances.filter(status='justificado').count()
+
+        # Dias letivos unicos
+        school_days = attendances.values('attendance_date').distinct().count()
+
+        # Taxa de frequencia
+        attendance_rate = 0
+        if total_records > 0:
+            attendance_rate = (presences / total_records) * 100
+
+        # Cria ou atualiza resumo
+        summary, created = TbClassAttendanceSummary.objects.update_or_create(
+            id_class_id=id_class,
+            year_month=year_month,
+            defaults={
+                'school_days': school_days,
+                'total_presences': presences,
+                'total_absences': absences,
+                'total_justified': justified,
+                'attendance_rate': attendance_rate
+            }
+        )
+
+        serializer = TbClassAttendanceSummarySerializer(summary)
+        return Response(serializer.data)
+
+
+class TbSchoolInfrastructureViewSet(viewsets.ModelViewSet):
+    """Infraestrutura das escolas"""
+    queryset = TbSchoolInfrastructure.objects.all().select_related('id_school')
+    serializer_class = TbSchoolInfrastructureSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['id_school', 'estado_conservacao', 'tem_internet', 'tem_biblioteca', 'necessita_reforma']
+    search_fields = ['id_school__school']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return TbSchoolInfrastructureSummarySerializer
+        return TbSchoolInfrastructureSerializer
+
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Estatisticas gerais de infraestrutura"""
+        total = self.queryset.count()
+        if total == 0:
+            return Response({'message': 'Nenhum dado de infraestrutura cadastrado'})
+
+        stats = {
+            'total_escolas': total,
+            'com_biblioteca': self.queryset.filter(tem_biblioteca=True).count(),
+            'com_quadra': self.queryset.filter(tem_quadra=True).count(),
+            'com_internet': self.queryset.filter(tem_internet=True).count(),
+            'com_acessibilidade': self.queryset.filter(tem_acessibilidade=True).count(),
+            'necessitam_reforma': self.queryset.filter(necessita_reforma=True).count(),
+            'total_computadores': self.queryset.aggregate(total=models.Sum('num_computadores'))['total'] or 0,
+            'total_salas': self.queryset.aggregate(total=models.Sum('num_salas'))['total'] or 0,
+            'por_estado_conservacao': {},
+        }
+
+        # Contagem por estado de conservacao
+        for estado in ['otimo', 'bom', 'regular', 'ruim', 'critico']:
+            count = self.queryset.filter(estado_conservacao=estado).count()
+            stats['por_estado_conservacao'][estado] = {
+                'quantidade': count,
+                'percentual': round((count / total) * 100, 1)
+            }
+
+        # Percentuais
+        stats['percentual_biblioteca'] = round((stats['com_biblioteca'] / total) * 100, 1)
+        stats['percentual_internet'] = round((stats['com_internet'] / total) * 100, 1)
+        stats['percentual_acessibilidade'] = round((stats['com_acessibilidade'] / total) * 100, 1)
+
+        return Response(stats)
+
+
+class TbSchoolFinancialViewSet(viewsets.ModelViewSet):
+    """Dados financeiros por escola"""
+    queryset = TbSchoolFinancial.objects.all().select_related('id_school')
+    serializer_class = TbSchoolFinancialSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['id_school', 'fiscal_year']
+    ordering_fields = ['fiscal_year', 'orcamento_total', 'orcamento_executado']
+
+    @action(detail=False, methods=['get'])
+    def summary_by_year(self, request):
+        """Resumo financeiro consolidado por ano"""
+        fiscal_year = request.query_params.get('fiscal_year')
+
+        queryset = self.queryset
+        if fiscal_year:
+            queryset = queryset.filter(fiscal_year=fiscal_year)
+
+        summary = queryset.aggregate(
+            total_orcamento=models.Sum('orcamento_total'),
+            total_executado=models.Sum('orcamento_executado'),
+            total_pessoal=models.Sum('despesa_pessoal'),
+            total_material=models.Sum('despesa_material'),
+            total_manutencao=models.Sum('despesa_manutencao'),
+            total_alimentacao=models.Sum('despesa_alimentacao'),
+            total_transporte=models.Sum('despesa_transporte'),
+            total_equipamentos=models.Sum('despesa_equipamentos'),
+            total_fundeb=models.Sum('fundeb_recebido'),
+            total_pdde=models.Sum('pdde_recebido'),
+        )
+
+        # Calcular percentual executado
+        if summary['total_orcamento'] and summary['total_orcamento'] > 0:
+            summary['percentual_executado'] = round(
+                (float(summary['total_executado'] or 0) / float(summary['total_orcamento'])) * 100, 2
+            )
+        else:
+            summary['percentual_executado'] = 0
+
+        return Response(summary)
+
+
+class TbMunicipalFinancialViewSet(viewsets.ModelViewSet):
+    """Dados financeiros municipais"""
+    queryset = TbMunicipalFinancial.objects.all()
+    serializer_class = TbMunicipalFinancialSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['fiscal_year']
+    ordering_fields = ['fiscal_year']
+
+
+class TbSchoolFlowIndicatorsViewSet(viewsets.ModelViewSet):
+    """Indicadores de fluxo escolar"""
+    queryset = TbSchoolFlowIndicators.objects.all().select_related('id_school')
+    serializer_class = TbSchoolFlowIndicatorsSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['id_school', 'fiscal_year', 'etapa']
+    ordering_fields = ['fiscal_year', 'taxa_aprovacao', 'taxa_abandono']
+
+    @action(detail=False, methods=['get'])
+    def summary_by_year(self, request):
+        """Resumo de fluxo escolar por ano"""
+        fiscal_year = request.query_params.get('fiscal_year')
+
+        queryset = self.queryset
+        if fiscal_year:
+            queryset = queryset.filter(fiscal_year=fiscal_year)
+
+        summary = queryset.aggregate(
+            total_matriculas=models.Sum('total_matriculas'),
+            total_aprovados=models.Sum('total_aprovados'),
+            total_reprovados=models.Sum('total_reprovados'),
+            total_abandono=models.Sum('total_abandono'),
+            media_aprovacao=Avg('taxa_aprovacao'),
+            media_reprovacao=Avg('taxa_reprovacao'),
+            media_abandono=Avg('taxa_abandono'),
+            media_distorcao=Avg('distorcao_idade_serie'),
+        )
+
+        # Arredonda medias
+        for key in ['media_aprovacao', 'media_reprovacao', 'media_abandono', 'media_distorcao']:
+            if summary[key]:
+                summary[key] = round(float(summary[key]), 2)
+
+        return Response(summary)
+
+
+class TbTeacherProfileViewSet(viewsets.ModelViewSet):
+    """Perfil dos professores"""
+    queryset = TbTeacherProfile.objects.all().select_related('id_teacher')
+    serializer_class = TbTeacherProfileSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['escolaridade', 'tipo_contrato', 'formacao_continuada']
+
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Estatisticas do corpo docente"""
+        total = self.queryset.count()
+        if total == 0:
+            return Response({'message': 'Nenhum perfil de professor cadastrado'})
+
+        stats = {
+            'total_professores': total,
+            'por_escolaridade': {},
+            'por_tipo_contrato': {},
+            'com_formacao_continuada': self.queryset.filter(formacao_continuada=True).count(),
+            'media_anos_experiencia': self.queryset.aggregate(media=Avg('anos_experiencia'))['media'] or 0,
+        }
+
+        # Por escolaridade
+        for esc in ['medio', 'graduacao', 'especializacao', 'mestrado', 'doutorado']:
+            count = self.queryset.filter(escolaridade=esc).count()
+            stats['por_escolaridade'][esc] = {
+                'quantidade': count,
+                'percentual': round((count / total) * 100, 1)
+            }
+
+        # Por tipo de contrato
+        for tipo in ['efetivo', 'temporario', 'clt']:
+            count = self.queryset.filter(tipo_contrato=tipo).count()
+            stats['por_tipo_contrato'][tipo] = {
+                'quantidade': count,
+                'percentual': round((count / total) * 100, 1)
+            }
+
+        return Response(stats)
+
+
+class TbStudentProfileViewSet(viewsets.ModelViewSet):
+    """Perfil demografico dos alunos"""
+    queryset = TbStudentProfile.objects.all().select_related('id_student')
+    serializer_class = TbStudentProfileSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = [
+        'genero', 'raca_cor', 'tem_deficiencia', 'bolsa_familia',
+        'nivel_socioeconomico', 'utiliza_transporte_escolar', 'zona_residencia'
+    ]
+
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Estatisticas demograficas dos alunos"""
+        total = self.queryset.count()
+        if total == 0:
+            return Response({'message': 'Nenhum perfil de aluno cadastrado'})
+
+        stats = {
+            'total_alunos': total,
+            'por_genero': {},
+            'por_raca_cor': {},
+            'por_nivel_socioeconomico': {},
+            'com_deficiencia': self.queryset.filter(tem_deficiencia=True).count(),
+            'bolsa_familia': self.queryset.filter(bolsa_familia=True).count(),
+            'transporte_escolar': self.queryset.filter(utiliza_transporte_escolar=True).count(),
+            'zona_urbana': self.queryset.filter(zona_residencia='urbana').count(),
+            'zona_rural': self.queryset.filter(zona_residencia='rural').count(),
+        }
+
+        # Por genero
+        for gen in ['masculino', 'feminino', 'outro']:
+            count = self.queryset.filter(genero=gen).count()
+            stats['por_genero'][gen] = count
+
+        # Por raca/cor
+        for raca in ['branca', 'preta', 'parda', 'amarela', 'indigena', 'nao_declarada']:
+            count = self.queryset.filter(raca_cor=raca).count()
+            stats['por_raca_cor'][raca] = count
+
+        # Por nivel socioeconomico
+        for nse in ['muito_baixo', 'baixo', 'medio_baixo', 'medio', 'medio_alto', 'alto']:
+            count = self.queryset.filter(nivel_socioeconomico=nse).count()
+            stats['por_nivel_socioeconomico'][nse] = count
+
+        # Percentuais
+        stats['percentual_deficiencia'] = round((stats['com_deficiencia'] / total) * 100, 1)
+        stats['percentual_bolsa_familia'] = round((stats['bolsa_familia'] / total) * 100, 1)
+        stats['percentual_transporte'] = round((stats['transporte_escolar'] / total) * 100, 1)
+
+        return Response(stats)
+
+
+class TbAlertViewSet(viewsets.ModelViewSet):
+    """Alertas do dashboard"""
+    queryset = TbAlert.objects.all().select_related('id_school')
+    serializer_class = TbAlertSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['id_school', 'tipo', 'severidade', 'resolvido']
+    ordering_fields = ['data_geracao', 'severidade']
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        """Marca um alerta como resolvido"""
+        from django.utils import timezone
+
+        alert = self.get_object()
+        alert.resolvido = True
+        alert.data_resolucao = timezone.now()
+        alert.save()
+
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        """Lista apenas alertas ativos (nao resolvidos)"""
+        alerts = self.queryset.filter(resolvido=False)
+        serializer = self.get_serializer(alerts, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def by_severity(self, request):
+        """Conta alertas por severidade"""
+        counts = {
+            'critica': self.queryset.filter(severidade='critica', resolvido=False).count(),
+            'alta': self.queryset.filter(severidade='alta', resolvido=False).count(),
+            'media': self.queryset.filter(severidade='media', resolvido=False).count(),
+            'baixa': self.queryset.filter(severidade='baixa', resolvido=False).count(),
+            'total_ativos': self.queryset.filter(resolvido=False).count(),
+        }
+        return Response(counts)
+
+
+class DashboardSecretariaViewSet(viewsets.ViewSet):
+    """Endpoints agregados para o Dashboard da Secretaria de Educacao"""
+
+    @action(detail=False, methods=['get'])
+    def visao_geral(self, request):
+        """Retorna dados consolidados da visao geral"""
+        # Contagens basicas
+        total_escolas = TbSchool.objects.count()
+        total_alunos = TbStudents.objects.filter(status='enrolled').count()
+        total_professores = TbTeacher.objects.filter(status='active').count()
+        total_turmas = TbClass.objects.count()
+
+        # IDEB medio (ultimo ano disponivel)
+        ideb_data = TbSchoolIdebIndicators.objects.aggregate(
+            media=Avg('actual_avg_score'),
+            ano=Max('fiscal_year')
+        )
+
+        # Taxa de aprovacao media
+        flow_data = TbSchoolFlowIndicators.objects.aggregate(
+            media_aprovacao=Avg('taxa_aprovacao')
+        )
+
+        # Taxa de frequencia media
+        attendance_data = TbClassAttendanceSummary.objects.aggregate(
+            media_frequencia=Avg('attendance_rate')
+        )
+
+        # Orcamento executado
+        financial_data = TbMunicipalFinancial.objects.order_by('-fiscal_year').first()
+        percentual_orcamento = None
+        if financial_data and financial_data.orcamento_total > 0:
+            percentual_orcamento = round(
+                (float(financial_data.orcamento_executado) / float(financial_data.orcamento_total)) * 100, 2
+            )
+
+        return Response({
+            'total_escolas': total_escolas,
+            'total_alunos': total_alunos,
+            'total_professores': total_professores,
+            'total_turmas': total_turmas,
+            'ideb_medio': round(float(ideb_data['media'] or 0), 2),
+            'ideb_ano_referencia': ideb_data['ano'],
+            'taxa_aprovacao': round(float(flow_data['media_aprovacao'] or 0), 2),
+            'taxa_frequencia': round(float(attendance_data['media_frequencia'] or 0), 2),
+            'orcamento_executado_percentual': percentual_orcamento,
+        })
+
+    @action(detail=False, methods=['get'])
+    def escolas_mapa(self, request):
+        """Retorna dados das escolas para o mapa"""
+        escolas = TbSchool.objects.all().select_related('id_city')
+
+        result = []
+        for escola in escolas:
+            # Busca geolocalizacao
+            try:
+                geo = TbSchoolGeolocation.objects.get(id_school=escola)
+                lat = float(geo.latitude)
+                lng = float(geo.longitude)
+                zona = geo.zona
+            except TbSchoolGeolocation.DoesNotExist:
+                continue  # Pula escolas sem geolocalizacao
+
+            # Conta alunos
+            total_alunos = TbStudents.objects.filter(
+                id_class__id_school=escola,
+                status='enrolled'
+            ).count()
+
+            # IDEB
+            ideb = TbSchoolIdebIndicators.objects.filter(
+                id_school=escola
+            ).order_by('-fiscal_year').first()
+            ideb_score = float(ideb.actual_avg_score) if ideb and ideb.actual_avg_score else None
+
+            # Taxa de aprovacao
+            flow = TbSchoolFlowIndicators.objects.filter(
+                id_school=escola
+            ).order_by('-fiscal_year').first()
+            taxa_aprovacao = float(flow.taxa_aprovacao) if flow else None
+
+            # Frequencia media
+            classes = TbClass.objects.filter(id_school=escola)
+            attendance = TbClassAttendanceSummary.objects.filter(
+                id_class__in=classes
+            ).aggregate(media=Avg('attendance_rate'))
+            taxa_frequencia = round(float(attendance['media']), 2) if attendance['media'] else None
+
+            # Infraestrutura
+            try:
+                infra = TbSchoolInfrastructure.objects.get(id_school=escola)
+                estado_conservacao = infra.estado_conservacao
+            except TbSchoolInfrastructure.DoesNotExist:
+                estado_conservacao = None
+
+            result.append({
+                'id': escola.id,
+                'nome': escola.school,
+                'latitude': lat,
+                'longitude': lng,
+                'zona': zona,
+                'total_alunos': total_alunos,
+                'ideb': ideb_score,
+                'taxa_aprovacao': taxa_aprovacao,
+                'taxa_frequencia': taxa_frequencia,
+                'estado_conservacao': estado_conservacao,
+            })
+
+        return Response(result)
+
+    @action(detail=False, methods=['get'])
+    def alertas_recentes(self, request):
+        """Retorna alertas recentes nao resolvidos"""
+        limit = int(request.query_params.get('limit', 10))
+        alerts = TbAlert.objects.filter(
+            resolvido=False
+        ).select_related('id_school').order_by('-severidade', '-data_geracao')[:limit]
+
+        serializer = TbAlertSerializer(alerts, many=True)
+        return Response(serializer.data)
