@@ -2,6 +2,77 @@ from rest_framework import serializers
 from students.models import *
 
 # ============================================
+# GERENCIAMENTO DE USUÁRIOS
+# ============================================
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    """Serializer para usuários do sistema com controle de acesso"""
+    city_name = serializers.CharField(source='city.city', read_only=True)
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'role', 'role_display', 'city', 'city_name', 'phone',
+            'is_active', 'is_staff', 'is_superuser',
+            'date_joined', 'last_login', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'date_joined', 'last_login', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+
+class CustomUserCreateSerializer(serializers.ModelSerializer):
+    """Serializer para criação de usuários com senha"""
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    password_confirm = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'username', 'email', 'password', 'password_confirm',
+            'first_name', 'last_name', 'role', 'city', 'phone'
+        ]
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError({"password": "As senhas não coincidem."})
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('password_confirm')
+        password = validated_data.pop('password')
+        user = CustomUser.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class CustomUserUpdateSerializer(serializers.ModelSerializer):
+    """Serializer para atualização de usuários (sem senha)"""
+    class Meta:
+        model = CustomUser
+        fields = [
+            'email', 'first_name', 'last_name', 'role', 'city',
+            'phone', 'is_active'
+        ]
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Serializer para mudança de senha"""
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)
+    new_password_confirm = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError({"new_password": "As senhas não coincidem."})
+        return attrs
+
+
+# ============================================
 # 1. CADASTROS BÁSICOS E GEOLOCALIZAÇÃO
 # ============================================
 
