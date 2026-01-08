@@ -1,4 +1,58 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+
+# ============================================
+# MODELO DE USUÁRIO CUSTOMIZADO
+# ============================================
+
+class CustomUser(AbstractUser):
+    """
+    Modelo customizado de usuário com controle de acesso por cidade
+
+    Grupos de Usuários:
+    - Gestor: Apenas visualiza dashboard
+    - Coordenador: Acesso completo a dados da sua cidade
+    - Administrador: Acesso total ao sistema (múltiplas cidades)
+    - Gerente: Acesso de edição sem permissão de cadastro
+    """
+    ROLE_CHOICES = [
+        ('gestor', 'Gestor'),
+        ('coordenador', 'Coordenador'),
+        ('administrador', 'Administrador'),
+        ('gerente', 'Gerente'),
+    ]
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='gestor')
+    city = models.ForeignKey('TbCity', on_delete=models.SET_NULL, null=True, blank=True,
+                            related_name='users', db_column='city_id')
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'custom_user'
+        verbose_name = 'Usuário'
+        verbose_name_plural = 'Usuários'
+
+    def __str__(self):
+        return f"{self.username} ({self.get_role_display()})"
+
+    @property
+    def is_gestor(self):
+        return self.role == 'gestor'
+
+    @property
+    def is_coordenador(self):
+        return self.role == 'coordenador'
+
+    @property
+    def is_administrador(self):
+        return self.role == 'administrador'
+
+    @property
+    def is_gerente(self):
+        return self.role == 'gerente'
 
 
 # ============================================

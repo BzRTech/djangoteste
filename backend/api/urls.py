@@ -5,6 +5,11 @@ from .views import *
 router = DefaultRouter()
 
 # ============================================
+# ROTAS DE GERENCIAMENTO DE USUÁRIOS
+# ============================================
+router.register(r'users', CustomUserViewSet, basename='user')
+
+# ============================================
 # ROTAS DE LOCALIZAÇÃO E ESTRUTURA
 # ============================================
 router.register(r'cities', TbCityViewSet, basename='city')

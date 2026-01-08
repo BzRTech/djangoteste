@@ -7,6 +7,101 @@ from django.db.models import Count, Avg, Max, Min, Q
 
 from students.models import *
 from .serializers import *
+from .permissions import (
+    RoleBasedPermission,
+    IsAdministrador,
+    DashboardPermission,
+    IsCoordenadorOrAdmin,
+    IsGerenteOrAdmin
+)
+
+# ============================================
+# GERENCIAMENTO DE USUÁRIOS
+# ============================================
+
+class CustomUserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciamento de usuários
+
+    Permissões:
+    - Administrador: pode criar, editar e listar todos os usuários
+    - Coordenador: pode listar apenas usuários da sua cidade
+    - Gerente: pode editar usuários mas não criar
+    - Gestor: apenas leitura
+    """
+    queryset = CustomUser.objects.all().select_related('city')
+    serializer_class = CustomUserSerializer
+    permission_classes = [RoleBasedPermission]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['role', 'city', 'is_active']
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    ordering_fields = ['username', 'date_joined', 'last_login']
+
+    def get_queryset(self):
+        """Filtra usuários baseado no papel do usuário logado"""
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        # Coordenador vê apenas usuários da sua cidade
+        if user.is_coordenador and user.city:
+            return queryset.filter(city=user.city)
+
+        return queryset
+
+    def get_serializer_class(self):
+        """Retorna serializer apropriado baseado na action"""
+        if self.action == 'create':
+            return CustomUserCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return CustomUserUpdateSerializer
+        elif self.action == 'change_password':
+            return ChangePasswordSerializer
+        return CustomUserSerializer
+
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """Retorna informações do usuário logado"""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def change_password(self, request, pk=None):
+        """Permite que o usuário mude sua própria senha"""
+        user = self.get_object()
+
+        # Apenas o próprio usuário ou admin pode mudar a senha
+        if request.user != user and not request.user.is_administrador:
+            return Response(
+                {'error': 'Você não tem permissão para mudar a senha de outro usuário'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            # Verifica senha antiga
+            if not user.check_password(serializer.validated_data['old_password']):
+                return Response(
+                    {'error': 'Senha antiga incorreta'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Define nova senha
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+
+            return Response({'message': 'Senha alterada com sucesso'})
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def roles(self, request):
+        """Lista todos os roles disponíveis"""
+        roles = [
+            {'value': choice[0], 'label': choice[1]}
+            for choice in CustomUser.ROLE_CHOICES
+        ]
+        return Response(roles)
+
 
 # ============================================
 # VIEWSETS DE LOCALIZAÇÃO E ESTRUTURA
@@ -14,26 +109,54 @@ from .serializers import *
 
 class TbCityViewSet(viewsets.ModelViewSet):
     """Cidades"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbCity.objects.all()
     serializer_class = TbCitySerializer
+    permission_classes = [RoleBasedPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['city', 'state']
     ordering_fields = ['city', 'state']
 
+    def get_queryset(self):
+        """Filtra cidades baseado no papel do usuário"""
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        # Coordenador vê apenas sua cidade
+        if user.is_coordenador and user.city:
+            return queryset.filter(id=user.city.id)
+
+        return queryset
+
 
 class TbSchoolViewSet(viewsets.ModelViewSet):
     """Escolas"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbSchool.objects.all().select_related('id_city')
     serializer_class = TbSchoolSerializer
+    permission_classes = [RoleBasedPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['id_city', 'id_city__state']
     search_fields = ['school', 'director_name', 'address', 'codigo_ideb']
 
+    def get_queryset(self):
+        """Filtra escolas baseado no papel do usuário"""
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        # Coordenador vê apenas escolas da sua cidade
+        if user.is_coordenador and user.city:
+            return queryset.filter(id_city=user.city)
+
+        return queryset
+
 
 class TbTeacherViewSet(viewsets.ModelViewSet):
     """Professores com suporte a disciplinas"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbTeacher.objects.all()
     serializer_class = TbTeacherSerializer
+    permission_classes = [RoleBasedPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status']
     search_fields = ['teacher_name', 'teacher_serial']
@@ -86,27 +209,44 @@ class TbTeacherViewSet(viewsets.ModelViewSet):
 
 class TbTeacherSubjectViewSet(viewsets.ModelViewSet):
     """Relação Professor-Disciplina"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbTeacherSubject.objects.all().select_related('id_teacher', 'id_subject')
     serializer_class = TbTeacherSubjectSerializer
+    permission_classes = [RoleBasedPermission]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['id_teacher', 'id_subject']
 
 
 class TbTeacherSchoolViewSet(viewsets.ModelViewSet):
     """Relação Professor-Escola"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbTeacherSchool.objects.all().select_related('id_teacher', 'id_school')
     serializer_class = TbTeacherSchoolSerializer
+    permission_classes = [RoleBasedPermission]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['id_teacher', 'id_school', 'status']
 
 
 class TbClassViewSet(viewsets.ModelViewSet):
     """Turmas"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbClass.objects.all().select_related('id_teacher', 'id_school')
     serializer_class = TbClassSerializer
+    permission_classes = [RoleBasedPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['id_school', 'id_teacher', 'school_year', 'grade', 'shift']
     search_fields = ['class_name']
+
+    def get_queryset(self):
+        """Filtra turmas baseado no papel do usuário"""
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        # Coordenador vê apenas turmas das escolas da sua cidade
+        if user.is_coordenador and user.city:
+            return queryset.filter(id_school__id_city=user.city)
+
+        return queryset
 
 
 
@@ -148,16 +288,29 @@ class TbClassViewSet(viewsets.ModelViewSet):
 
 class TbStudentsViewSet(viewsets.ModelViewSet):
     """Alunos"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbStudents.objects.all().select_related(
         'id_class',
         'id_class__id_school',
         'id_class__id_teacher'
     )
     serializer_class = TbStudentsSerializer
+    permission_classes = [RoleBasedPermission]
     lookup_field = 'id_student'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['id_class', 'status']
     search_fields = ['student_name', 'student_serial']
+
+    def get_queryset(self):
+        """Filtra alunos baseado no papel do usuário"""
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        # Coordenador vê apenas alunos das escolas da sua cidade
+        if user.is_coordenador and user.city:
+            return queryset.filter(id_class__id_school__id_city=user.city)
+
+        return queryset
 
     @action(detail=False, methods=['post'])
     def bulk_import(self, request):
@@ -489,6 +642,7 @@ class TbStudentsViewSet(viewsets.ModelViewSet):
 
 class TbSubjectViewSet(viewsets.ModelViewSet):
     """Disciplinas (Subjects)"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbSubject.objects.all()
     serializer_class = TbSubjectSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -502,6 +656,7 @@ class TbSubjectViewSet(viewsets.ModelViewSet):
 
 class TbSchoolIdebIndicatorsViewSet(viewsets.ModelViewSet):
     """Indicadores IDEB das Escolas"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbSchoolIdebIndicators.objects.all().select_related('id_school')
     serializer_class = TbSchoolIdebIndicatorsSerializer
     filter_backends = [DjangoFilterBackend]
@@ -510,6 +665,7 @@ class TbSchoolIdebIndicatorsViewSet(viewsets.ModelViewSet):
 
 class TbClassIdebIndicatorsViewSet(viewsets.ModelViewSet):
     """Indicadores IDEB das Turmas"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbClassIdebIndicators.objects.all().select_related('id_class')
     serializer_class = TbClassIdebIndicatorsSerializer
     filter_backends = [DjangoFilterBackend]
@@ -522,6 +678,7 @@ class TbClassIdebIndicatorsViewSet(viewsets.ModelViewSet):
 
 class TbCompetencyIdebViewSet(viewsets.ModelViewSet):
     """Competências IDEB"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbCompetencyIdeb.objects.all()
     serializer_class = TbCompetencyIdebSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -531,6 +688,7 @@ class TbCompetencyIdebViewSet(viewsets.ModelViewSet):
 
 class TbDescriptorsCatalogViewSet(viewsets.ModelViewSet):
     """Catálogo de Descritores"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbDescriptorsCatalog.objects.all()
     serializer_class = TbDescriptorsCatalogSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -544,6 +702,7 @@ class TbDescriptorsCatalogViewSet(viewsets.ModelViewSet):
 
 class TbExamsViewSet(viewsets.ModelViewSet):
     """Exames com funcionalidades extras"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbExams.objects.all()
     serializer_class = TbExamsSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -917,6 +1076,7 @@ class TbExamsViewSet(viewsets.ModelViewSet):
 
 class TbQuestionsViewSet(viewsets.ModelViewSet):
     """Questões"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbQuestions.objects.all().select_related('id_exam', 'id_descriptor')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['id_exam', 'difficulty_level', 'id_descriptor']
@@ -930,6 +1090,7 @@ class TbQuestionsViewSet(viewsets.ModelViewSet):
 
 class TbAlternativesViewSet(viewsets.ModelViewSet):
     """Alternativas"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbAlternatives.objects.all().select_related('id_question')
     serializer_class = TbAlternativesSerializer
     filter_backends = [DjangoFilterBackend]
@@ -938,6 +1099,7 @@ class TbAlternativesViewSet(viewsets.ModelViewSet):
 
 class TbQuestionCompetencyViewSet(viewsets.ModelViewSet):
     """Relação Questão-Competência"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbQuestionCompetency.objects.all().select_related('id_question', 'id_competency')
     serializer_class = TbQuestionCompetencySerializer
     filter_backends = [DjangoFilterBackend]
@@ -950,6 +1112,7 @@ class TbQuestionCompetencyViewSet(viewsets.ModelViewSet):
 
 class TbExamApplicationsViewSet(viewsets.ModelViewSet):
     """Aplicações de Exames"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbExamApplications.objects.all().select_related(
         'id_exam',
         'id_class',
@@ -1327,6 +1490,7 @@ class TbExamApplicationsViewSet(viewsets.ModelViewSet):
 
 class TbAssessmentMetadataViewSet(viewsets.ModelViewSet):
     """Metadados de Avaliações"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbAssessmentMetadata.objects.all().select_related('id_exam_application')
     serializer_class = TbAssessmentMetadataSerializer
     filter_backends = [DjangoFilterBackend]
@@ -1335,6 +1499,7 @@ class TbAssessmentMetadataViewSet(viewsets.ModelViewSet):
 
 class TbStudentAnswersViewSet(viewsets.ModelViewSet):
     """Respostas dos Alunos"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbStudentAnswers.objects.all().select_related(
         'id_student', 'id_question', 'id_selected_alternative'
     )
@@ -1453,6 +1618,7 @@ class TbStudentAnswersViewSet(viewsets.ModelViewSet):
 
 class TbExamResultsViewSet(viewsets.ModelViewSet):
     """Resultados dos Exames"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbExamResults.objects.all().select_related(
         'id_student',
         'id_student__id_class',
@@ -1506,6 +1672,7 @@ class TbExamResultsViewSet(viewsets.ModelViewSet):
 
 class TbStudentDescriptorAchievementsViewSet(viewsets.ModelViewSet):
     """Conquistas de Descritores dos Alunos"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbStudentDescriptorAchievements.objects.all().select_related(
         'id_student', 'id_descriptor'
     )
@@ -1517,6 +1684,7 @@ class TbStudentDescriptorAchievementsViewSet(viewsets.ModelViewSet):
 
 class TbStudentLearningProgressViewSet(viewsets.ModelViewSet):
     """Progresso de Aprendizagem dos Alunos"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbStudentLearningProgress.objects.all().select_related(
         'id_student', 'id_descriptor', 'id_exam_application'
     )
@@ -1546,6 +1714,7 @@ class TbStudentLearningProgressViewSet(viewsets.ModelViewSet):
     
 class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
     """Perfil completo do aluno com descritores conquistados"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbStudents.objects.all().select_related(
         'id_class',
         'id_class__id_school',
@@ -1736,6 +1905,7 @@ class StudentProfileViewSet(viewsets.ReadOnlyModelViewSet):
 
 class TbSchoolGeolocationViewSet(viewsets.ModelViewSet):
     """Geolocalizacao das escolas"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbSchoolGeolocation.objects.all().select_related('id_school')
     serializer_class = TbSchoolGeolocationSerializer
     filter_backends = [DjangoFilterBackend]
@@ -1744,6 +1914,7 @@ class TbSchoolGeolocationViewSet(viewsets.ModelViewSet):
 
 class TbStudentAttendanceViewSet(viewsets.ModelViewSet):
     """Frequencia dos alunos"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbStudentAttendance.objects.all().select_related('id_student', 'id_class')
     serializer_class = TbStudentAttendanceSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -1796,6 +1967,7 @@ class TbStudentAttendanceViewSet(viewsets.ModelViewSet):
 
 class TbClassAttendanceSummaryViewSet(viewsets.ModelViewSet):
     """Resumo de frequencia por turma"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbClassAttendanceSummary.objects.all().select_related('id_class', 'id_class__id_school')
     serializer_class = TbClassAttendanceSummarySerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -1853,6 +2025,7 @@ class TbClassAttendanceSummaryViewSet(viewsets.ModelViewSet):
 
 class TbSchoolInfrastructureViewSet(viewsets.ModelViewSet):
     """Infraestrutura das escolas"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbSchoolInfrastructure.objects.all().select_related('id_school')
     serializer_class = TbSchoolInfrastructureSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -1901,6 +2074,7 @@ class TbSchoolInfrastructureViewSet(viewsets.ModelViewSet):
 
 class TbSchoolFinancialViewSet(viewsets.ModelViewSet):
     """Dados financeiros por escola"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbSchoolFinancial.objects.all().select_related('id_school')
     serializer_class = TbSchoolFinancialSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -1942,6 +2116,7 @@ class TbSchoolFinancialViewSet(viewsets.ModelViewSet):
 
 class TbMunicipalFinancialViewSet(viewsets.ModelViewSet):
     """Dados financeiros municipais"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbMunicipalFinancial.objects.all()
     serializer_class = TbMunicipalFinancialSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -1951,6 +2126,7 @@ class TbMunicipalFinancialViewSet(viewsets.ModelViewSet):
 
 class TbSchoolFlowIndicatorsViewSet(viewsets.ModelViewSet):
     """Indicadores de fluxo escolar"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbSchoolFlowIndicators.objects.all().select_related('id_school')
     serializer_class = TbSchoolFlowIndicatorsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -1987,6 +2163,7 @@ class TbSchoolFlowIndicatorsViewSet(viewsets.ModelViewSet):
 
 class TbTeacherProfileViewSet(viewsets.ModelViewSet):
     """Perfil dos professores"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbTeacherProfile.objects.all().select_related('id_teacher')
     serializer_class = TbTeacherProfileSerializer
     filter_backends = [DjangoFilterBackend]
@@ -2028,6 +2205,7 @@ class TbTeacherProfileViewSet(viewsets.ModelViewSet):
 
 class TbStudentProfileViewSet(viewsets.ModelViewSet):
     """Perfil demografico dos alunos"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbStudentProfile.objects.all().select_related('id_student')
     serializer_class = TbStudentProfileSerializer
     filter_backends = [DjangoFilterBackend]
@@ -2080,6 +2258,7 @@ class TbStudentProfileViewSet(viewsets.ModelViewSet):
 
 class TbAlertViewSet(viewsets.ModelViewSet):
     """Alertas do dashboard"""
+    permission_classes = [RoleBasedPermission]
     queryset = TbAlert.objects.all().select_related('id_school')
     serializer_class = TbAlertSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -2121,15 +2300,36 @@ class TbAlertViewSet(viewsets.ModelViewSet):
 
 class DashboardSecretariaViewSet(viewsets.ViewSet):
     """Endpoints agregados para o Dashboard da Secretaria de Educacao"""
+    permission_classes = [DashboardPermission]
+
+    def _filter_by_user_city(self, queryset, model_city_field='id_city'):
+        """Helper para filtrar queryset baseado na cidade do usuário"""
+        user = self.request.user
+        if user.is_coordenador and user.city:
+            filter_kwargs = {model_city_field: user.city}
+            return queryset.filter(**filter_kwargs)
+        return queryset
 
     @action(detail=False, methods=['get'])
     def visao_geral(self, request):
         """Retorna dados consolidados da visao geral"""
+        user = request.user
+
+        # Filtra base queries por cidade se for coordenador
+        schools_qs = TbSchool.objects.all()
+        if user.is_coordenador and user.city:
+            schools_qs = schools_qs.filter(id_city=user.city)
+            students_qs = TbStudents.objects.filter(id_class__id_school__id_city=user.city)
+            classes_qs = TbClass.objects.filter(id_school__id_city=user.city)
+        else:
+            students_qs = TbStudents.objects.all()
+            classes_qs = TbClass.objects.all()
+
         # Contagens basicas
-        total_escolas = TbSchool.objects.count()
-        total_alunos = TbStudents.objects.filter(status='enrolled').count()
+        total_escolas = schools_qs.count()
+        total_alunos = students_qs.filter(status='enrolled').count()
         total_professores = TbTeacher.objects.filter(status='active').count()
-        total_turmas = TbClass.objects.count()
+        total_turmas = classes_qs.count()
 
         # IDEB medio (ultimo ano disponivel)
         ideb_data = TbSchoolIdebIndicators.objects.aggregate(
