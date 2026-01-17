@@ -13,6 +13,7 @@ import DescriptorCatalog from "./pages/DescriptorCatalog";
 import AdminCRUD from "./pages/AdminCRUD";
 import ExamsManagement from "./pages/ExamsManagement";
 import ExamImport from "./pages/ExamImport";
+import InputsPage from "./pages/InputsPage";
 import StudentProfile from "./pages/StudentProfile";
 import StudentAnswers from "./pages/StudentAnswers";
 import TakeExam from "./pages/TakeExam";
@@ -57,6 +58,7 @@ function App() {
               <Route path="admin" element={<AdminCRUD />} />
               <Route path="exams" element={<ExamsManagement />} />
               <Route path="exam-import" element={<ExamImport />} />
+              <Route path="inputs" element={<InputsPage />} />
               <Route path="student/:id" element={<StudentProfile />} />
               <Route path="student-answers" element={<StudentAnswers />} />
               <Route path="take-exam" element={<TakeExam />} />

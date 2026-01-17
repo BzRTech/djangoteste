@@ -24,6 +24,7 @@ import {
   DollarSign,
   Users,
   ChevronDown,
+  Database,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -35,6 +36,7 @@ const Layout = () => {
 
   const navLinks = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/inputs", label: "Cadastros", icon: Database },
     { to: "/descriptors", label: "Descritores", icon: BookOpen },
     { to: "/admin", label: "Administracao", icon: Settings },
     { to: "/exams", label: "Provas", icon: FileText },
